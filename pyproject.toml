@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "csiphon"
-version = "0.1.0"
+version = "0.1.1"
 description = "An online-first, schema-validated CSI preprocessing pipeline library."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -39,7 +39,10 @@ dependencies = ["numpy>=2.1"]
 
 # Optional dependencies (required for specific steps only)
 [project.optional-dependencies]
-sst = ["ssqueezepy>=0.6"]
+# ssqueezepy pulls in numba, which does not yet support NumPy >= 2.5. Without the
+# upper bound, `pip install csiphon[sst]` resolves the latest NumPy and numba
+# then fails to import. Drop this pin once numba supports NumPy 2.5+.
+sst = ["ssqueezepy>=0.6", "numpy<2.5"]
 filters = ["scipy>=1.11"]
 
 # Every optional feature at once (a self-reference to the extras above).
