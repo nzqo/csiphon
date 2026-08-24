@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-24
+
+### Fixed
+
+- `csiphon[sst]` now pins `numpy<2.5`. `ssqueezepy` pulls in numba, which does
+  not yet support NumPy 2.5+, so the extra previously installed a NumPy/numba
+  combination that failed to import.
+
 ## [0.1.0] - 2026-08-24
 
 ### Added
@@ -22,5 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional extras: `filters` (scipy) and `sst` (ssqueezepy); the base install is
   numpy-only. Ships `py.typed`.
 
-[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/nzqo/csiphon/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/nzqo/csiphon/releases/tag/v0.1.0

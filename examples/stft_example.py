@@ -63,7 +63,7 @@ def main() -> None:
 
     rate = 1000.0
     profile = AcquisitionProfile(
-        n_rx_antennas=3,
+        n_rx_antennas=4,
         subcarrier_indices=tuple(range(114)),
         sampling_rate_hz=rate,
     )
@@ -73,7 +73,7 @@ def main() -> None:
     compiled = pipeline.compile(profile)
     print(compiled.describe())
 
-    # generate some random (time, antennas=3, subcarriers=114) CSI
+    # generate some random (time, antennas=4, subcarriers=114) CSI
     rng = np.random.default_rng(0)
     shape = (4000, profile.n_rx_antennas, profile.n_subcarriers)
     csi = rng.standard_normal(shape) + 1j * rng.standard_normal(shape)

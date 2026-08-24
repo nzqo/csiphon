@@ -17,12 +17,14 @@ validated pipeline.
 from csiphon import AcquisitionProfile, Pipeline
 from csiphon.steps import GainNormalize, Magnitude, WindowedVariance
 
+# Define the hardware setup
 profile = AcquisitionProfile(
     n_rx_antennas=3,
     subcarrier_indices=tuple(range(52)),
     sampling_rate_hz=1000.0,
 )
 
+# Define the pipeline steps
 siphon = (
     Pipeline()
     .then(Magnitude())
@@ -31,6 +33,10 @@ siphon = (
     .compile(profile)
 )
 
+# Generate a summary of the pipeline
+print(siphon.describe())
+
+# Push some data through it to run
 features = siphon.pour(profile.raw_signal(csi, timestamps)).single()
 ```
 
