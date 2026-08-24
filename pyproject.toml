@@ -7,10 +7,32 @@ name = "csiphon"
 version = "0.1.0"
 description = "An online-first, schema-validated CSI preprocessing pipeline library."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 license = "MIT"
-authors = [{ name = "shiba_q" }]
+license-files = ["LICENSE"]
+authors = [{ name = "Fabian Portner" }]
+keywords = [
+    "csi",
+    "wifi",
+    "channel-state-information",
+    "dsp",
+    "signal-processing",
+    "doppler",
+    "streaming",
+]
 
+# Trove classifiers for the PyPI page. No `License ::` classifier: the SPDX
+# `license` field above supersedes it (setuptools >= 77 rejects using both).
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Typing :: Typed",
+]
 
 # Core dependencies (pretty lean)
 dependencies = ["numpy>=2.1"]
@@ -23,6 +45,13 @@ filters = ["scipy>=1.11"]
 # Every optional feature at once (a self-reference to the extras above).
 all = ["csiphon[sst,filters]"]
 dev = ["pytest", "mypy", "ruff", "pyright", "pylint", "polars"]
+# Tooling for building and uploading the package to PyPI.
+release = ["build", "twine"]
+
+[project.urls]
+Homepage = "https://github.com/nzqo/csiphon"
+Repository = "https://github.com/nzqo/csiphon"
+Issues = "https://github.com/nzqo/csiphon/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -32,7 +61,7 @@ csiphon = ["py.typed"]
 
 [tool.mypy]
 strict = true
-python_version = "3.13"
+python_version = "3.12"
 
 # Optional third-party dependencies ship no type information.
 [[tool.mypy.overrides]]
