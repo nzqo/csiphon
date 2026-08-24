@@ -1,6 +1,6 @@
 <p align="center">
   <img
-    src="assets/ai_slop_mascot.png"
+    src="https://raw.githubusercontent.com/nzqo/csiphon/main/assets/ai_slop_mascot.png"
     alt="slop Kanna doing Wi-Fi plumbing"
     width="300"
   >
@@ -66,4 +66,4 @@ The core only depends on NumPy. Install every optional transform with:
 pip install -e ".[all]"
 ```
 
-Requires Python 3.13+. Runnable recipes live in [`examples/`](examples/).
+Runnable recipes live in [`examples/`](examples/).
