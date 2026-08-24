@@ -139,6 +139,9 @@ def _hann_fft_power(window_size: int, keep: npt.NDArray[np.bool_]) -> FrameFn:
     hann = np.hanning(window_size)
 
     def frame(block: SignalArray) -> RealArray:
+        # The shared window signature is complex-capable; FFT power is real-only.
+        block = as_real_array(block)
+
         # A block is one window: axis 0 is time within the window, the rest are
         # the other axes carried along. Taper and rFFT along axis 0 (time).
         taper_shape = (window_size,) + (1,) * (block.ndim - 1)

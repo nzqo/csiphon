@@ -104,5 +104,8 @@ class FixedSizeWindowSum(Step):
             profile.sampling_rate_hz, self.window_s, self.hop_s
         )
         return WindowedOperator(
-            geometry, lambda block: block.sum(axis=0), in_layout, out_layout
+            geometry,
+            lambda block: as_real_array(block.sum(axis=0)),
+            in_layout,
+            out_layout,
         )
