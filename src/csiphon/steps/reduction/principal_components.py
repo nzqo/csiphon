@@ -14,7 +14,7 @@ from typing import ClassVar
 
 import numpy as np
 
-from csiphon.core.arrays import RealArray, SignalArray
+from csiphon.core.arrays import SignalArray
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
@@ -34,8 +34,10 @@ from csiphon.spec import (
 class PCABasis:
     """A pre-fit PCA basis: the training mean and the top component vectors."""
 
-    mean: RealArray  # shape (n_features,)
-    components: RealArray  # shape (n_components, n_features)
+    # Real for real input; complex when fit on complex CSI (the projection in
+    # `_project` stays consistent either way).
+    mean: SignalArray  # shape (n_features,)
+    components: SignalArray  # shape (n_components, n_features)
 
 
 def fit_pca_basis(signal: Signal, axis: AxisName, n_components: int) -> PCABasis:
