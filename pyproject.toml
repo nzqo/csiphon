@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "csiphon"
+version = "0.1.0"
+description = "An online-first, schema-validated CSI preprocessing pipeline library."
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+authors = [{ name = "shiba_q" }]
+
+
+# Core dependencies (pretty lean)
+dependencies = ["numpy>=2.1"]
+
+# Optional dependencies (required for specific steps only)
+[project.optional-dependencies]
+sst = ["ssqueezepy>=0.6"]
+filters = ["scipy>=1.11"]
+
+# Every optional feature at once (a self-reference to the extras above).
+all = ["csiphon[sst,filters]"]
+dev = ["pytest", "mypy", "ruff", "pyright", "pylint", "polars"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+csiphon = ["py.typed"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+
+# Optional third-party dependencies ship no type information.
+[[tool.mypy.overrides]]
+module = ["ssqueezepy.*", "scipy.*"]
+ignore_missing_imports = true
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
+# mypy --strict is the library's strict type gate (see [tool.mypy]).
+# pyright runs at basic so numpy's shape-Any typing and unannotated
+# pytest fixtures don't drown the editor in noise while still catching
+# real mistakes.
+typeCheckingMode = "basic"
+
+# scipy / ssqueezepy ship no type stubs.
+reportMissingModuleSource = false
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "ANN"]
+
+# RUF001-003: arrows / ∈ / ² in human-facing docstrings and spec strings are
+# intentional, not ambiguous-unicode mistakes.
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures and parametrized args are conventionally left unannotated.
+"tests/**" = ["ANN001", "ANN002", "ANN003"]
+
+[tool.pylint.messages_control]
+# Ruff (its formatter for code + E501/noqa for prose) is the single line-length
+# authority; pylint's line-too-long would double-report and ignores ruff's noqa.
+disable = ["line-too-long"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
