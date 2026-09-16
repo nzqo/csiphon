@@ -2,8 +2,8 @@
 
 Build an immutable Pipeline from steps (branch and merge as needed), compile it
 against an AcquisitionProfile into a Siphon, then run it over a whole recording
-(`siphon.pour()`) or chunk by chunk (`siphon.stream()`). A run returns Outlets,
-the named results.
+(`siphon.pour()`, or `siphon.measure()` to also learn what each step cost) or
+chunk by chunk (`siphon.stream()`). A run returns Outlets, the named results.
 """
 
 from __future__ import annotations
@@ -24,9 +24,11 @@ from csiphon.pipeline import (
     Concatenate,
     Exact,
     Fuse,
+    GroupCost,
     Hold,
     Junction,
     Mean,
+    MeasuredRun,
     MergeStrategy,
     Node,
     Outlets,
@@ -36,6 +38,7 @@ from csiphon.pipeline import (
     Siphon,
     Stack,
     Step,
+    StepCost,
     Stream,
     StreamOperator,
     Sum,
@@ -53,10 +56,12 @@ __all__ = [
     "Description",
     "Exact",
     "Fuse",
+    "GroupCost",
     "Hold",
     "Junction",
     "Layout",
     "Mean",
+    "MeasuredRun",
     "MergeStrategy",
     "Node",
     "Outlets",
@@ -68,6 +73,7 @@ __all__ = [
     "Siphon",
     "Stack",
     "Step",
+    "StepCost",
     "StepSpec",
     "Stream",
     "StreamOperator",

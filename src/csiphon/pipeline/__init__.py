@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from csiphon.pipeline._align_ops import align_on_time
+from csiphon.pipeline.measure import GroupCost, MeasuredRun, StepCost
 from csiphon.pipeline.merges import (
     Alignment,
     Concatenate,
@@ -28,9 +29,11 @@ __all__ = [
     "Concatenate",
     "Exact",
     "Fuse",
+    "GroupCost",
     "Hold",
     "Junction",
     "Mean",
+    "MeasuredRun",
     "MergeStrategy",
     "Node",
     "Outlets",
@@ -40,6 +43,7 @@ __all__ = [
     "Siphon",
     "Stack",
     "Step",
+    "StepCost",
     "Stream",
     "StreamOperator",
     "Sum",

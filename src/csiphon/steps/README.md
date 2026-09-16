@@ -43,7 +43,7 @@ class TheStep(PointwiseStep):  # or Step for non-pointwise
         admissible_values=(ValueKind.MAGNITUDE,),  # None = anything
         admissible_reprs=None,
         requires_axes=(),  # statically required axes
-        layout_change_description="values now power",  # how the output shape changes
+        layout_effect=LayoutEffect(note="values now power"),  # how the layout changes
         streaming=Streaming.BATCH_EQUIVALENT,  # BATCH_EQUIVALENT | BATCH_DIVERGENT | UNAVAILABLE
     )
 
@@ -60,7 +60,10 @@ Rules of thumb:
 - **`require_inputs` first.** It enforces exactly what `spec` declares, so the
   documented contract and the runtime check can never drift. Put any extra
   structural guard (e.g. `require_static_axis`) right after it, guards grouped
-  up front, early failure.
+  up front, early failure. Reject a bad parameter with a message that gives the
+  valid range and the value received: `f"hop_size must be >= 1, got {hop}."`
+  Some guards prevent real failures (an infinite loop, a crash), so they are
+  worth writing even when the bad value looks unlikely.
 - **The spec is the contract.** `describe()` reads it; the test suite
   (`tests/test_inspection.py`) enforces that every step declares a complete spec
   and documents every parameter.
@@ -71,4 +74,12 @@ Rules of thumb:
 - **Batch is always the best algorithm.** `process` runs the full
   whole-recording computation; `stream` returns a `StreamOperator` (or `None` if
   batch-only). A `PointwiseStep` derives both from `transform_values`.
+- **Declare streaming honestly.** `BATCH_EQUIVALENT` means the streamed output
+  matches batch to numerical precision; `BATCH_DIVERGENT` means it differs by
+  design (say how in `streaming_note`); `UNAVAILABLE` means batch-only. Where a
+  step claims interior windows match batch, add a test that asserts it.
+- **Export a new step.** Re-export it from its category `__init__.py` and add it
+  to `csiphon.steps` (`__all__` in `steps/__init__.py`). This makes
+  `from csiphon.steps import TheStep` work and lets the inspection tests, which
+  enumerate `__all__`, find it. A step missing from `__all__` is untested.
 ```

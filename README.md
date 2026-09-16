@@ -2,7 +2,7 @@
   <img
     src="https://raw.githubusercontent.com/nzqo/csiphon/main/assets/ai_slop_mascot.png"
     alt="slop Kanna doing Wi-Fi plumbing"
-    width="300"
+    width="400"
   >
 </p>
 
@@ -55,6 +55,9 @@ features = siphon.pour(profile.raw_signal(csi, timestamps)).single()
 - **Describes itself.** Steps and compiled siphons expose their contracts,
   layouts, parameters, and streaming behavior, and can save that information
   alongside results for reproducibility.
+- **Measures itself.** `siphon.measure(signal)` pours once and reports each
+  step's time and output shape (memory on request), per step or for a named
+  group of consecutive steps.
 
 The built-in steps cover calibration, cleaning, filtering, delay and
 time-frequency transforms, temporal features, pooling, statistics, reduction,

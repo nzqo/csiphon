@@ -347,6 +347,7 @@ class _Graph:
         self._labels = labels
         self._outlets = outlets
         self._inlet_axes, self._inlet_kinds = inlet
+
         # Per-inlet (axes, kinds) detail, keyed by inlet line id (multi-inlet only).
         self._inlets = dict(inlets or {})
         self._nodes = {node.output: node for node in nodes}
@@ -371,6 +372,7 @@ class _Graph:
             node.output for node in nodes if node.output not in self._consumers
         }
         self._ids = [_START, _END, *(node.output for node in nodes)]
+
         # Several inlets (roots) that all converge into one merge is the drawable
         # multi-inlet shape; `_source_merge` is that merge's line (else None).
         self._source_merge = self._find_source_merge(roots)

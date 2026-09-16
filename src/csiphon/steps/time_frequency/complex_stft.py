@@ -35,6 +35,7 @@ from csiphon.steps._support.windowing import FrameFn, WindowedOperator, WindowGe
 
 def _short_time_fft() -> tuple[Any, Any]:
     """Import scipy's ShortTimeFFT / get_window lazily, with a helpful error."""
+
     try:
         # Lazy so the base install stays numpy-only.
         from scipy.signal import (  # pylint: disable=import-outside-toplevel

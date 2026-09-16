@@ -25,6 +25,8 @@ from csiphon.core.layout import Layout
 from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.signal import Signal
 from csiphon.pipeline._lines import INLET, inlet_id
+from csiphon.pipeline.measure import GroupSpans, MeasuredRun
+from csiphon.pipeline.measure import measure as _run_measure
 from csiphon.pipeline.merges import Alignment, Junction, MergeStrategy
 from csiphon.pipeline.runners import Outlets, Stream, _inlet_signals
 from csiphon.pipeline.runners import pour as _run_pour
@@ -529,6 +531,26 @@ class Siphon:
         """
 
         return _run_pour(self, _inlet_signals(signals, named))
+
+    def measure(
+        self,
+        signals: Signal | Mapping[str, Signal] | None = None,
+        *,
+        memory: bool = False,
+        groups: GroupSpans | None = None,
+        **named: Signal,
+    ) -> MeasuredRun:
+        """Pour a whole recording and report what every step cost.
+
+        Same inputs as `pour`; the result holds the outlets plus a `StepCost` per
+        step. `memory=True` adds peak/added bytes (tracemalloc; slows the run).
+        `groups` names spans of consecutive steps, by number or step name:
+        `groups={"clean-up": ("magnitude", "gain-normalize")}`.
+        """
+
+        return _run_measure(
+            self, _inlet_signals(signals, named), memory=memory, groups=groups
+        )
 
     def stream(self) -> Stream:
         """Open a stateful streaming session; refuses if any step cannot stream."""

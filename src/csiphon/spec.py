@@ -36,8 +36,8 @@ class Streaming(StrEnum):
 
     - BATCH_EQUIVALENT.: the online version gives the same result as batch.
     - BATCH_DIVERGENT..: an online version exists, but it is a different computation
-      whose result differs from batch (e.g. a causal filter, a block-local
-      transform).
+      whose result differs from batch (e.g. a causal filter, or a valid-window
+      STFT where batch zero-pads the edges).
     - UNAVAILABLE......: there is no online version; needs the whole recording.
     """
 

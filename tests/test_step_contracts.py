@@ -422,16 +422,19 @@ def test_principal_components_streaming_depends_on_basis() -> None:
     assert np.allclose(batch.values, streamed.values)
 
 
-def test_synchrosqueezed_streaming_depends_on_window() -> None:
-    """SST is batch-only until a streaming_window turns on its block-local variant."""
+def test_synchrosqueezed_streaming_depends_on_block_size() -> None:
+    """SST is batch-only until a block_size turns on its block-local variant.
+
+    With a block size, batch runs block-local too, so the step is BATCH_EQUIVALENT.
+    """
 
     # resolve_streaming() is pure config -- it never touches the ssqueezepy backend.
     assert SynchrosqueezedPower().resolve_streaming() is Streaming.UNAVAILABLE
-    windowed = SynchrosqueezedPower(streaming_window=256)
-    assert windowed.resolve_streaming() is Streaming.BATCH_DIVERGENT
+    blocked = SynchrosqueezedPower(block_size=256)
+    assert blocked.resolve_streaming() is Streaming.BATCH_EQUIVALENT
 
     layout = _input_layout(SynchrosqueezedPower.spec, ValueKind.REAL)
-    Pipeline().then(windowed).compile(PROFILE, inlet=layout).stream()  # must not raise
+    Pipeline().then(blocked).compile(PROFILE, inlet=layout).stream()  # must not raise
 
 
 def test_describe_reflects_the_resolved_contract_of_a_configured_step() -> None:

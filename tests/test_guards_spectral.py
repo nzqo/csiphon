@@ -84,15 +84,15 @@ def test_multitaper_rejects_nonpositive_parameters(
     "kwargs",
     [
         {"voices_per_octave": 0},
-        {"streaming_window": 0},
+        {"block_size": 0},
     ],
 )
 def test_synchrosqueezed_rejects_bad_parameters(
     profile: AcquisitionProfile, kwargs: dict[str, int]
 ) -> None:
-    """A sub-one voice count or streaming window fails at compile.
+    """A sub-one voice count or block size fails at compile.
 
-    `streaming_window=0` would otherwise spin the block-local operator in an
+    `block_size=0` would otherwise spin the block-local transform in an
     infinite loop, so this guard is a real bug fix, not only hygiene.
     """
 

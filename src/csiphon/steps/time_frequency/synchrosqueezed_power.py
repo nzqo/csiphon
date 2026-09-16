@@ -1,9 +1,11 @@
 """Synchrosqueezed wavelet power (optional `[sst]` extra -> ssqueezepy).
 
-Batch runs the full whole-recording synchrosqueezed CWT, the best-quality
-transform. Streaming uses a *block-local* variant (each fixed-size block
-transformed independently), a genuine approximation, so batch and streaming are
-intentionally not identical here.
+Without a block size the batch run is the full whole-recording synchrosqueezed
+CWT, the best-quality transform, and the step cannot stream. With `block_size`
+set, batch and streaming both run the *block-local* variant: each fixed-size
+block of the time axis is transformed independently and the results are joined
+back in time order. That variant is an approximation of the whole-recording one,
+but batch and streaming then agree exactly.
 """
 
 from __future__ import annotations
@@ -76,17 +78,18 @@ def _sst_power(
 class SynchrosqueezedPower(Step):
     """Synchrosqueezed CWT power along time, per input channel.
 
-    Batch: whole-recording transform. Streaming: block-local transform over
-    non-overlapping `streaming_window`-sample blocks (an approximation); with
-    `streaming_window` unset the step is batch-only.
+    With `block_size` unset the batch run transforms the whole recording and the
+    step is batch-only. With `block_size` set, both batch and streaming transform
+    consecutive non-overlapping `block_size`-sample blocks independently and join
+    them in time order; a trailing partial block is dropped.
     """
 
     voices_per_octave: int = field(
         default=2, metadata={"doc": "wavelet voices per octave"}
     )
-    streaming_window: int | None = field(
+    block_size: int | None = field(
         default=None,
-        metadata={"doc": "block size (samples) enabling block-local streaming"},
+        metadata={"doc": "block size (samples) for the block-local transform"},
     )
 
     spec: ClassVar[StepSpec] = StepSpec(
@@ -96,22 +99,23 @@ class SynchrosqueezedPower(Step):
         admissible_values=(ValueKind.REAL, ValueKind.MAGNITUDE),
         admissible_reprs=None,
         requires_axes=(AxisName.TIME,),
-        # Streams (block-local) only with a streaming_window; see resolve_streaming.
+        # Streams (block-local, matching batch) only with a block_size; see
+        # resolve_streaming.
         layout_effect=LayoutEffect(
             adds=(AxisName.FREQUENCY,),
             value_kind=ValueKind.POWER,
             note="time-frequency",
         ),
         streaming=CONFIG_DEPENDENT,
-        streaming_note="block-local; batch-only unless streaming_window is set",
+        streaming_note="block-local with block_size set, else batch-only",
     )
 
     def resolve_streaming(self) -> Streaming:
-        """Streams (a block-local approximation) only with a block size set."""
+        """Streams only with a block size set; batch is then block-local too."""
 
-        if self.streaming_window is None:
+        if self.block_size is None:
             return Streaming.UNAVAILABLE
-        return Streaming.BATCH_DIVERGENT
+        return Streaming.BATCH_EQUIVALENT
 
     def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
         """Insert a runtime-sized frequency axis; produce time-frequency power."""
@@ -123,10 +127,8 @@ class SynchrosqueezedPower(Step):
             raise LayoutError(
                 f"voices_per_octave must be >= 1, got {self.voices_per_octave}."
             )
-        if self.streaming_window is not None and self.streaming_window < 1:
-            raise LayoutError(
-                f"streaming_window must be >= 1, got {self.streaming_window}."
-            )
+        if self.block_size is not None and self.block_size < 1:
+            raise LayoutError(f"block_size must be >= 1, got {self.block_size}.")
 
         frequency = Axis(AxisName.FREQUENCY, size=None, unit="Hz")
         return (
@@ -138,46 +140,90 @@ class SynchrosqueezedPower(Step):
     def process(
         self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
     ) -> Signal:
-        """Whole-recording synchrosqueezed power (best quality)."""
+        """Whole-recording power, or block-local power when `block_size` is set."""
 
-        rate_hz = effective_rate_hz(signal.times, profile.sampling_rate_hz)
-        power, frequencies = _sst_power(
-            as_real_array(signal.values), rate_hz, self.voices_per_octave
+        values = as_real_array(signal.values)
+        if self.block_size is None:
+            rate_hz = effective_rate_hz(signal.times, profile.sampling_rate_hz)
+            power, frequencies = _sst_power(values, rate_hz, self.voices_per_octave)
+            return signal.with_values(
+                power, out_layout, coords={AxisName.FREQUENCY: frequencies}
+            )
+
+        block_local, _ = self.block_local(
+            values, signal.times, profile.sampling_rate_hz, out_layout
         )
-        return signal.with_values(
-            power, out_layout, coords={AxisName.FREQUENCY: frequencies}
+        return block_local
+
+    def block_local(
+        self,
+        values: RealArray,
+        times: RealArray,
+        rate_hz: float | None,
+        out_layout: Layout,
+    ) -> tuple[Signal, int]:
+        """Transform every whole `block_size` block of `values` on its own.
+
+        Returns the blocks' power joined in time order and the number of input
+        samples they cover. A trailing partial block is left out: ssqueezepy
+        picks its number of frequency bins from the block length, so a shorter
+        block would not fit the same frequency axis. Both batch and streaming
+        use this, which is what makes them agree.
+        """
+
+        if self.block_size is None:
+            raise LayoutError("block_local needs a block_size.")
+
+        blocks: list[RealArray] = []
+        frequencies: RealArray | None = None
+        for start in range(0, values.shape[0] - self.block_size + 1, self.block_size):
+            stop = start + self.block_size
+
+            # Use the known rate if we have one, otherwise estimate it from the block.
+            block_rate_hz = (
+                rate_hz
+                if rate_hz is not None
+                else effective_rate_hz(times[start:stop], None)
+            )
+            power, frequencies = _sst_power(
+                values[start:stop], block_rate_hz, self.voices_per_octave
+            )
+            blocks.append(power)
+
+        # Shorter than one block: nothing to emit yet.
+        if frequencies is None:
+            return empty_signal(out_layout), 0
+
+        covered = len(blocks) * self.block_size
+        joined: SignalArray = as_real_array(np.concatenate(blocks, axis=0))
+        signal = Signal(
+            values=joined,
+            times=times[:covered],
+            layout=out_layout,
+            coords={AxisName.FREQUENCY: frequencies},
         )
+        return signal, covered
 
     def stream(
         self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
     ) -> StreamOperator | None:
         """Return a block-local operator, or `None` if no block size is set."""
 
-        if self.streaming_window is None:
+        if self.block_size is None:
             return None
-        return _BlockLocalSst(
-            window=self.streaming_window,
-            rate_hz=profile.sampling_rate_hz,
-            voices_per_octave=self.voices_per_octave,
-            out_layout=out_layout,
-        )
+        return _BlockLocalSst(self, profile.sampling_rate_hz, out_layout)
 
 
 class _BlockLocalSst(StreamOperator):
-    """Transforms each full block of `window` samples independently."""
+    """Transforms each full block of `block_size` samples independently."""
 
     def __init__(
-        self,
-        window: int,
-        rate_hz: float | None,
-        voices_per_octave: int,
-        out_layout: Layout,
+        self, step: SynchrosqueezedPower, rate_hz: float | None, out_layout: Layout
     ) -> None:
         """Buffer samples until a whole block is available."""
 
-        self._window = window
+        self._step = step
         self._rate_hz = rate_hz
-        self._voices_per_octave = voices_per_octave
         self._out_layout = out_layout
         self._buffer: RealArray | None = None
         self._times = np.zeros(0)
@@ -193,38 +239,16 @@ class _BlockLocalSst(StreamOperator):
         )
         self._times = np.concatenate([self._times, chunk.times])
 
-        # Transform each whole block that has arrived, one at a time, and drop it
-        # from the front of the buffer. A partial block waits for more samples.
-        blocks: list[SignalArray] = []
-        block_times: list[RealArray] = []
-        frequencies: RealArray | None = None
-        while self._buffer.shape[0] >= self._window:
-            block = self._buffer[: self._window]
-
-            # Use the known rate if we have one, otherwise estimate it from the block.
-            rate_hz = (
-                self._rate_hz
-                if self._rate_hz is not None
-                else effective_rate_hz(self._times[: self._window], None)
-            )
-            power, frequencies = _sst_power(block, rate_hz, self._voices_per_octave)
-            blocks.append(power)
-            block_times.append(self._times[: self._window])
-            self._buffer = self._buffer[self._window :]
-            self._times = self._times[self._window :]
-
-        if not blocks:
-            return empty_signal(self._out_layout)
-
-        coords = {} if frequencies is None else {AxisName.FREQUENCY: frequencies}
-        return Signal(
-            values=as_real_array(np.concatenate(blocks, axis=0)),
-            times=np.concatenate(block_times),
-            layout=self._out_layout,
-            coords=coords,
+        # Transform every whole block that has arrived and drop those samples from
+        # the front of the buffer. A partial block waits for more samples.
+        emitted, covered = self._step.block_local(
+            self._buffer, self._times, self._rate_hz, self._out_layout
         )
+        self._buffer = self._buffer[covered:]
+        self._times = self._times[covered:]
+        return emitted
 
     def flush(self) -> Signal:
-        """Drop any trailing partial block (matches valid-block semantics)."""
+        """Drop any trailing partial block (matches the batch run)."""
 
         return empty_signal(self._out_layout)

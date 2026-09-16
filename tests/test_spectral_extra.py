@@ -606,28 +606,93 @@ def test_complex_stft_batch_and_stream_agree_on_shared_interior() -> None:
     assert np.allclose(batch[offset : offset + 20], streamed[:20], atol=1e-12)
 
 
-def test_synchrosqueezed_block_local_streaming_is_chunk_invariant(
+def test_synchrosqueezed_block_local_pour_matches_streaming(
     profile: AcquisitionProfile,
 ) -> None:
-    """Block-local SST buffers whole blocks, so streaming is the same however it's cut.
+    """With a block_size, pour() runs block-local and equals streaming, however cut.
 
-    It is BATCH_DIVERGENT, so we compare two streamings rather than stream vs batch:
-    feeding one 256-sample block per push must equal feeding each block split across
-    several pushes. This drives the block-buffer path no other test feeds with data.
+    The step claims BATCH_EQUIVALENT in this configuration: an ordinary run must
+    give the block-local result, the same as pushing whole 256-sample blocks or
+    pushing each block split across several chunks.
     """
 
     pytest.importorskip("ssqueezepy")
     signal = _feature_signal(n=768)  # three whole 256-sample blocks
     compiled = (
         Pipeline()
-        .then(SynchrosqueezedPower(streaming_window=256))
+        .then(SynchrosqueezedPower(block_size=256))
         .compile(profile, inlet=signal.layout)
     )
+    poured = compiled.pour(signal).single()
     whole_blocks = stream_in_chunks(compiled, signal, 256)
     split_blocks = stream_in_chunks(compiled, signal, 64)
 
-    assert np.array_equal(whole_blocks.times, split_blocks.times)
-    assert np.allclose(whole_blocks.values, split_blocks.values)
+    assert poured.n_samples == 768
+    assert np.array_equal(poured.times, whole_blocks.times)
+    assert np.array_equal(poured.times, split_blocks.times)
+    assert np.allclose(poured.values, whole_blocks.values)
+    assert np.allclose(poured.values, split_blocks.values)
+
+
+def test_synchrosqueezed_block_local_pour_transforms_blocks_independently(
+    profile: AcquisitionProfile,
+) -> None:
+    """Each block of a block-local pour equals the whole-recording SST of that block.
+
+    This pins the block-local semantics (blocks do not see each other) and shows
+    the result differs from the whole-recording transform of the same signal.
+    """
+
+    pytest.importorskip("ssqueezepy")
+    signal = _feature_signal(n=512)
+    block_local = (
+        Pipeline()
+        .then(SynchrosqueezedPower(block_size=256))
+        .compile(profile, inlet=signal.layout)
+        .pour(signal)
+        .single()
+    )
+    whole = (
+        Pipeline().then(SynchrosqueezedPower()).compile(profile, inlet=signal.layout)
+    )
+
+    for start in (0, 256):
+        block = Signal(
+            values=signal.values[start : start + 256],
+            times=signal.times[start : start + 256],
+            layout=signal.layout,
+        )
+        expected = whole.pour(block).single()
+        assert np.allclose(block_local.values[start : start + 256], expected.values)
+
+    # The whole-recording transform has a different frequency grid altogether
+    # (ssqueezepy sizes it from the signal length), so the two are not comparable.
+    assert whole.pour(signal).single().values.shape != block_local.values.shape
+
+
+def test_synchrosqueezed_block_local_pour_drops_the_partial_tail(
+    profile: AcquisitionProfile,
+) -> None:
+    """A block-local pour keeps only whole blocks, with their timestamps.
+
+    A shorter tail block would get a different frequency grid, so it is dropped,
+    as the streaming operator does at flush; the timestamps of the kept blocks
+    still line up with the input.
+    """
+
+    pytest.importorskip("ssqueezepy")
+    signal = _feature_signal(n=700)  # two whole 256-sample blocks + 188 left over
+    out = (
+        Pipeline()
+        .then(SynchrosqueezedPower(block_size=256))
+        .compile(profile, inlet=signal.layout)
+        .pour(signal)
+        .single()
+    )
+
+    assert out.n_samples == 512
+    assert np.array_equal(out.times, signal.times[:512])
+    assert out.layout.axis_names[:2] == (AxisName.TIME, AxisName.FREQUENCY)
 
 
 def test_synchrosqueezed_concentrates_power_at_the_tone_frequency(
