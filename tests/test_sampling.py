@@ -1,7 +1,5 @@
 """Sampling-rate and jitter behaviour (the WiFi-CSI reality: never uniform)."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 

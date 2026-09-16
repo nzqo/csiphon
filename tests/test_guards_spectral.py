@@ -6,8 +6,6 @@ compile time: the `LayoutError` surfaces as a `CompileError` naming the step's
 and flips one parameter out of range, asserting the compile fails on that step.
 """
 
-from __future__ import annotations
-
 import pytest
 
 from csiphon import (

@@ -1,7 +1,5 @@
 """The 2-D flow graph: branches side by side, forks split, staged merges join."""
 
-from __future__ import annotations
-
 import re
 
 from csiphon.graphics.style import Styler

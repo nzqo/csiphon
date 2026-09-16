@@ -1,7 +1,5 @@
 """describe() rendering: color toggle and custom themes."""
 
-from __future__ import annotations
-
 import re
 
 from csiphon import describe

@@ -2,8 +2,6 @@
 
 # Feature-signal setup overlaps with other test modules by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import numpy as np
 import pytest
 from conftest import fold_channels_into_feature, stream_in_chunks
@@ -372,6 +370,8 @@ def test_complex_stft_isolates_positive_doppler() -> None:
     times = np.arange(2000) / fs
 
     def run(tone: np.ndarray) -> np.ndarray:
+        """The STFT power of `tone` through the pipeline."""
+
         signal = profile.raw_signal(tone, times)
         out = (
             Pipeline()

@@ -125,8 +125,10 @@ class Pipeline:  # pylint: disable=too-many-instance-attributes
         if len(set(names)) != len(names):
             raise LayoutError("Inlet names must be distinct.")
         ids = tuple(inlet_id(name) for name in names)
+        # Several lines are live from the start, so there is no head: merge or
+        # select one before .then.
         return cls(
-            _head=None,  # several live lines: merge or select one before .then
+            _head=None,
             _live=ids,
             _names=dict(zip(names, ids, strict=True)),
             _inlets=names,
@@ -421,11 +423,9 @@ class Pipeline:  # pylint: disable=too-many-instance-attributes
     def to_description(self) -> PipelineDescription:
         """A readable summary of the (un-compiled) recipe (see `csiphon.describe`).
 
-        Nothing has been compiled yet, so there are no concrete layouts: the inlet
-        and outlet layouts are None and each step carries None for its in/out layout.
-        Each step therefore shows its *declared* effect rather than a concrete
-        transition; `labels` and `outlets` still name the lines so forks and kept
-        outputs are visible.
+        Nothing has been compiled yet, so every layout is None and each step shows
+        its declared effect rather than a concrete transition. `labels` and
+        `outlets` still name the lines, so forks and kept outputs are visible.
         """
 
         steps = tuple(
@@ -487,6 +487,8 @@ def _profile_from_layout(
     """`base`'s rate/subcarriers, but device counts read off `layout`'s axes."""
 
     def axis_size(name: AxisName) -> int:
+        """The device count on `name`, or 1 when the layout has no such axis."""
+
         return layout.axis(name).size or 1 if layout.has_axis(name) else 1
 
     return replace(
@@ -577,12 +579,10 @@ class Siphon:
     def to_description(self) -> PipelineDescription:
         """A readable summary of every compiled node and its layout.
 
-        Every node carries its real input and output layout. Two inlet fields are
-        passed: `inlet_layouts` (one layout per source line) is what the flow graph
-        draws when there are several sources; `inlet_layout` (singular) is a single
-        representative shown on the compact card and in the JSON summary. For a
-        multi-inlet pipeline the sources differ, so the representative is just the
-        first. The full per-source detail lives in `inlet_layouts`.
+        Every node carries its real input and output layout. `inlet_layouts` has
+        one layout per source line (what the flow graph draws for several
+        sources); `inlet_layout` is the first of them, the representative shown
+        on the compact card and in the JSON summary.
         """
 
         steps = tuple(

@@ -140,9 +140,11 @@ class WindowedOperator(StreamOperator):  # pylint: disable=too-many-instance-att
         self._buffer: SignalArray = _empty_time_buffer(in_layout)
         self._buffer_times: RealArray = np.zeros(0)
         # Counters that let us map buffer positions back to absolute sample and
-        # window numbers even after we drop consumed samples off the front.
-        self._buffer_origin = 0  # absolute index of the buffer's first sample
-        self._next_window_index = 0  # how many windows we have produced so far
+        # window numbers even after we drop consumed samples off the front: the
+        # absolute index of the buffer's first sample, and how many windows we
+        # have produced so far.
+        self._buffer_origin = 0
+        self._next_window_index = 0
 
     def push(self, chunk: Signal) -> Signal:
         """Add the next samples and return any windows they complete.

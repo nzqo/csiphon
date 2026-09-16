@@ -1,7 +1,5 @@
 """describe(...).as_dict() / .save() capture full pipeline metadata."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 
@@ -10,6 +8,8 @@ from csiphon.steps import DelayAutocorrelation, DelayTaps, Magnitude
 
 
 def _compiled(profile: AcquisitionProfile) -> Siphon:
+    """A small three-step siphon to describe and save."""
+
     return (
         Pipeline()
         .then(Magnitude())

@@ -40,8 +40,6 @@ returns None and the caller falls back to a plain list, so a description never
 breaks.
 """
 
-from __future__ import annotations
-
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -388,10 +386,12 @@ class _Graph:
         targets = set()
         for line in roots:
             consumers = self._consumers.get(line, [])
-            if len(consumers) != 1:  # an inlet feeding more than the one merge
+            # An inlet feeding anything but the one merge is not this shape.
+            if len(consumers) != 1:
                 return None
             targets.add(consumers[0])
-        if len(targets) != 1:  # inlets fanning into different nodes
+        # Neither are inlets fanning into different nodes.
+        if len(targets) != 1:
             return None
         merge = self._nodes[next(iter(targets))]
         return merge.output if set(merge.inputs) == roots else None
@@ -429,7 +429,8 @@ class _Graph:
         elif self._source_merge is not None:
             block = self._build_multi_inlet()
         else:
-            return None  # not a shape we can lay out
+            # Not a shape we can lay out.
+            return None
 
         # If any node was left undrawn, the wiring was not a shape we can lay out.
         if len(self._seen) != len(self._nodes):

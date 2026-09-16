@@ -1,7 +1,5 @@
 """Unit tests for the batch behaviour of individual steps."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 from conftest import fold_channels_into_feature
@@ -73,6 +71,42 @@ def test_delay_taps_truncates_to_real(profile, raw_signal) -> None:
     )
     assert out.layout.axis(AxisName.DELAY).size == 6
     assert not np.iscomplexobj(out.values)
+
+
+def test_delay_autocorrelation_of_a_flat_spectrum_is_a_delta() -> None:
+    """A flat magnitude over every FFT bin autocorrelates to 1 at delay 0, else 0.
+
+    Eight subcarriers filling an 8-point FFT: the inverse DFT of a constant power
+    is a delta, and the mean-normalization puts its height at the mean power (1).
+    """
+
+    profile = AcquisitionProfile(n_rx_antennas=1, subcarrier_indices=tuple(range(8)))
+    flat = np.ones((2, 1, 8), dtype=complex)
+    signal = profile.raw_signal(flat, np.arange(2) / 1000.0)
+    out = _run(profile, signal, Magnitude(), DelayAutocorrelation(nfft=8))
+
+    delay = out.layout.axis_position(AxisName.DELAY)
+    expected = np.zeros(8)
+    expected[0] = 1.0
+    assert np.allclose(np.moveaxis(out.values, delay, -1), expected)
+
+
+def test_delay_taps_pick_the_requested_taps_real_then_imag(profile, raw_signal) -> None:
+    """DelayTaps(first_tap, num_taps) is those ACF bins' real parts, then imaginary."""
+
+    acf = _run(profile, raw_signal, Magnitude(), DelayAutocorrelation())
+    taps = _run(
+        profile,
+        raw_signal,
+        Magnitude(),
+        DelayAutocorrelation(),
+        DelayTaps(num_taps=2, first_tap=1),
+    )
+
+    delay = acf.layout.axis_position(AxisName.DELAY)
+    kept = np.take(acf.values, [1, 2], axis=delay)
+    expected = np.concatenate([kept.real, kept.imag], axis=delay)
+    assert np.allclose(taps.values, expected)
 
 
 def test_fold_antenna_and_delay(profile, raw_signal) -> None:

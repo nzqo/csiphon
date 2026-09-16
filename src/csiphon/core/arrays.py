@@ -1,7 +1,5 @@
 """Concrete NumPy array types used at numerical boundaries."""
 
-from __future__ import annotations
-
 import numpy as np
 import numpy.typing as npt
 

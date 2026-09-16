@@ -17,8 +17,6 @@ still described in prose, so those claims are pinned by the bespoke tests at the
 bottom of this file and in the per-topic test modules.
 """
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 from conftest import concrete_steps, stream_in_chunks

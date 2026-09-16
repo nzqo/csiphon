@@ -1,7 +1,5 @@
 """Statistics steps: window reduction, correctness, and batch/stream equivalence."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 from conftest import stream_in_chunks

@@ -10,8 +10,6 @@ signal's own timestamps, or its unwrapped packet numbers. Everything here works 
 same whichever coordinate is used.
 """
 
-from __future__ import annotations
-
 from collections.abc import Sequence as SequenceABC
 
 import numpy as np

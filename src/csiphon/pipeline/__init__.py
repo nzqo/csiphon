@@ -2,8 +2,6 @@
 
 # The re-export __all__ here overlaps the top-level package's by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 from csiphon.pipeline._align_ops import align_on_time
 from csiphon.pipeline.measure import GroupCost, MeasuredRun, StepCost
 from csiphon.pipeline.merges import (

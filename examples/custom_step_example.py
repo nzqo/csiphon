@@ -9,8 +9,6 @@ when you must mix across time, and supply your own streaming operator.
 
 # Examples share small profile/signal setup blocks by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from typing import ClassVar
 

@@ -1,7 +1,5 @@
 """Merge alignment: Exact (strict, loud on empty) and Hold (sample-and-hold)."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 from conftest import stream_in_chunks
@@ -313,6 +311,8 @@ def test_cross_grid_merge_needs_hold(profile: AcquisitionProfile) -> None:
     signal = profile.raw_signal(csi, np.arange(length) / 1000.0)
 
     def fused(align: Exact | Hold) -> int:
+        """The fused output length for one alignment."""
+
         siphon = (
             Pipeline()
             .then(Magnitude())

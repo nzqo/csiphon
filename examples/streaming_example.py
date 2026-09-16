@@ -6,8 +6,6 @@ that (for these exact-streaming steps) the streamed result matches batch.
 
 # The batch and streaming examples deliberately build the same pipeline.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import numpy as np
 
 from csiphon import AcquisitionProfile, AxisName, Pipeline, Signal

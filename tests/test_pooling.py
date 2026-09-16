@@ -3,8 +3,6 @@
 # which pylint reads as shadowing.
 # pylint: disable=redefined-outer-name
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 from conftest import stream_in_chunks

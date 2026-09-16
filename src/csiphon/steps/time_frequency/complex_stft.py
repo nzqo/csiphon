@@ -58,6 +58,8 @@ def _stft_frame(window_size: int, freq_bins: int, window: RealArray) -> FrameFn:
     scale = float(window.sum())
 
     def frame(block: SignalArray) -> RealArray:
+        """The tapered FFT of one window."""
+
         # A block is one window: axis 0 is time within it, the rest ride along.
         taper_shape = (window_size,) + (1,) * (block.ndim - 1)
         tapered = block * window.reshape(taper_shape)

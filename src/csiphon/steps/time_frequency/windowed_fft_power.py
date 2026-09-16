@@ -139,6 +139,8 @@ def _hann_fft_power(window_size: int, keep: npt.NDArray[np.bool_]) -> FrameFn:
     hann = np.hanning(window_size)
 
     def frame(block: SignalArray) -> RealArray:
+        """The FFT power of one window."""
+
         # The shared window signature is complex-capable; FFT power is real-only.
         block = as_real_array(block)
 

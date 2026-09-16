@@ -9,8 +9,6 @@ Runs with the base (numpy-only) install.
 
 # Examples share small profile/signal setup blocks by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import numpy as np
 
 from csiphon import AcquisitionProfile, AxisName, Pipeline, Signal

@@ -1,7 +1,5 @@
 """DropSamples: reproducibly drop samples to simulate independent or bursty loss."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 

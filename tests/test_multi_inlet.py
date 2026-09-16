@@ -1,7 +1,5 @@
 """Multiple inlets: load N sources, merge, then process (Modes 1 and 2)."""
 
-from __future__ import annotations
-
 from dataclasses import replace
 
 import numpy as np

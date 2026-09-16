@@ -1,7 +1,5 @@
 """Calibration steps: axis-reference combinations and phase-ramp removal."""
 
-from __future__ import annotations
-
 import numpy as np
 
 from csiphon import AcquisitionProfile, AxisName, Pipeline, Signal

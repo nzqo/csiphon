@@ -15,8 +15,6 @@ If your step transforms each time sample on its own, subclass PointwiseStep and
 you get an exact streaming operator for free :)
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
@@ -62,10 +60,8 @@ class Step(ABC):
     def resolve_required_axes(self) -> tuple[AxisName, ...]:
         """Return the axes this configured step needs on its input.
 
-        This exists separately from `spec.requires_axes` for steps whose required
-        axis is not fixed but chosen at construction (an `axis=` parameter): the
-        class-level spec cannot know that axis, so those steps override this to
-        report it. By default it just returns the spec's static `requires_axes`.
+        Steps whose required axis is chosen at construction (an `axis=`
+        parameter) override this, since the class-level spec cannot know it.
         """
 
         return self.spec.requires_axes

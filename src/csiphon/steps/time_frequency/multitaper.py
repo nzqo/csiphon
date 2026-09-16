@@ -2,6 +2,7 @@
 
 # Windowed-spectral spec/skeleton overlaps with WindowedFFTPower by design.
 # pylint: disable=duplicate-code
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -79,6 +80,8 @@ def _multitaper_frame(
     """A frame function: one window to in-band power, per non-time channel."""
 
     def frame(block: SignalArray) -> RealArray:
+        """The multitaper spectrum of one window."""
+
         # The shared window signature is complex-capable; multitaper is real-only.
         # Take the spectrogram along the chosen axis, broadcasting the other axes.
         return broadcast_channels(
@@ -127,9 +130,10 @@ class Multitaper(Step):
         category=Category.TIME_FREQUENCY,
         admissible_values=(ValueKind.REAL, ValueKind.MAGNITUDE, ValueKind.POWER),
         admissible_reprs=None,
-        # The axis to average over is chosen at run time; see resolve_* below.
+        # The axis to average over, and so the layout effect (that axis becomes
+        # frequency), is chosen at run time; see the resolve_* methods below.
         requires_axes=(),
-        layout_effect=CONFIG_DEPENDENT,  # chosen axis becomes frequency; see resolve
+        layout_effect=CONFIG_DEPENDENT,
         streaming=Streaming.BATCH_EQUIVALENT,
         streaming_note="needs scipy (the [filters] extra)",
     )

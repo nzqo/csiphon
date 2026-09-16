@@ -124,9 +124,10 @@ class RobustPca(Step):  # pylint: disable=too-many-instance-attributes  # RPCA h
         category=Category.REDUCTION,
         admissible_values=(ValueKind.MAGNITUDE, ValueKind.REAL, ValueKind.POWER),
         admissible_reprs=None,
-        # The axis to decompose along is chosen at run time; see resolve_* below.
+        # The axis to decompose along, and so the layout effect (that axis is
+        # replaced), is chosen at run time; see the resolve_* methods below.
         requires_axes=(),
-        layout_effect=CONFIG_DEPENDENT,  # replaces the chosen axis; see resolve below
+        layout_effect=CONFIG_DEPENDENT,
         streaming=Streaming.UNAVAILABLE,
         streaming_note="fits the decomposition on the whole recording, so batch-only",
     )

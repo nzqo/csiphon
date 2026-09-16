@@ -12,8 +12,6 @@ Runs on the base (numpy-only) install. Run: python examples/inspect_example.py
 
 # The example builds a small pipeline, like the batch/streaming examples do.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 from csiphon import AcquisitionProfile, AxisName, Pipeline, describe
 from csiphon.steps import (
     DelayAutocorrelation,

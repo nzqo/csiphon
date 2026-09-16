@@ -24,7 +24,14 @@ from csiphon.core.semantics import Representation, ValueKind
 
 @dataclass(frozen=True, slots=True)
 class Layout:
-    """Axes and semantic information known before numerical execution."""
+    """Axes and semantic information known before numerical execution.
+
+    An axis may have an unknown size (`size is None`) when it only resolves at
+    run time, like the SST frequency axis whose bin count depends on the
+    recording length. The time axis (AxisName.TIME) is special: its coordinates
+    are the per-sample timestamps, which live on the Signal (Signal.times), not
+    in the layout.
+    """
 
     # fmt: off
     axes           : tuple[Axis, ...]
@@ -33,16 +40,7 @@ class Layout:
     # fmt: on
 
     def __post_init__(self) -> None:
-        """Reject duplicate axis names.
-
-        An axis may have an unknown size (`size is None`) when it only resolves
-        at run time, like the SST frequency axis whose bin count depends on the
-        recording length.
-
-        The time axis (AxisName.TIME) is special: its coordinates are the
-        per-sample timestamps, and they live on the Signal (Signal.times), not
-        in the layout.
-        """
+        """Reject duplicate axis names."""
 
         names = tuple(axis.name for axis in self.axes)
         if len(names) != len(set(names)):

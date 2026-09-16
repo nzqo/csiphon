@@ -8,8 +8,6 @@ jitter is tolerated by default; a step may warn when the jitter is excessive,
 and `strict` mode upgrades that warning to an error.
 """
 
-from __future__ import annotations
-
 import warnings
 
 import numpy as np

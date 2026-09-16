@@ -14,8 +14,6 @@ no plotting libraries -- it prints.
 
 # Examples share small profile/signal setup blocks by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import sys
 from dataclasses import dataclass
 

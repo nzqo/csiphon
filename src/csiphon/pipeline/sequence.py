@@ -9,8 +9,6 @@ The time-based merge machinery (strategies, `Exact` / `Hold`, `Junction`, `Trap`
 lives in merges.py and uses this module for the sequence case.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from collections.abc import Sequence as SequenceABC
 from dataclasses import dataclass, field
@@ -60,8 +58,9 @@ class Sequence:
             raise DataError(
                 "Aligning on sequence numbers needs Signal.sequence on every branch."
             )
+        # Without a period the raw numbers are the keys; with one, unwrap them.
         if self.period is None:
-            numbers = [_sequence_of(signal) for signal in signals]  # raw, no unwrap
+            numbers = [_sequence_of(signal) for signal in signals]
         else:
             numbers = [_unwrap(_sequence_of(signal), self.period) for signal in signals]
         return _calibrate_offsets(signals, numbers, self.tolerance_s)
@@ -92,7 +91,7 @@ def _unwrap(raw: RealArray, period: int) -> RealArray:
 
     A wrap drops the number by almost a whole `period` (e.g. period-1 -> 0), so only a
     large backward jump (more than half a period) counts. A small backward step is a
-    reordered or duplicated packet, not a wrap, and must NOT shift the epoch.
+    reordered or duplicated packet, not a wrap, and must not shift the epoch.
     """
 
     if raw.size < 2:
@@ -182,6 +181,12 @@ def _first_match_offset(
 # --- streaming ---------------------------------------------------------------
 
 
+def _no_samples() -> RealArray:
+    """An empty sample buffer, the starting state of a branch."""
+
+    return as_real_array(np.zeros(0))
+
+
 @dataclass
 class _Branch:
     """One branch's buffered, incrementally-unwrapped stream inside a SequenceTrap.
@@ -193,13 +198,15 @@ class _Branch:
     `keys` shifted onto the shared absolute index.
     """
 
-    period: int
-    signal: Signal | None = None
-    raw: RealArray = field(default_factory=lambda: as_real_array(np.zeros(0)))
-    keys: RealArray = field(default_factory=lambda: as_real_array(np.zeros(0)))
-    offset: float = 0.0
-    _last_raw: float = float("nan")  # last wrapped number seen, to seed the next unwrap
-    _epoch: int = 0  # how many whole periods this branch has wrapped through so far
+    # fmt: off
+    period    : int
+    signal    : Signal | None = None
+    raw       : RealArray     = field(default_factory=_no_samples)
+    keys      : RealArray     = field(default_factory=_no_samples)
+    offset    : float         = 0.0
+    _last_raw : float         = float("nan")  # last wrapped number, seeds the unwrap
+    _epoch    : int           = 0             # whole periods wrapped through so far
+    # fmt: on
 
     @property
     def aligned_keys(self) -> RealArray:

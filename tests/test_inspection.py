@@ -5,8 +5,6 @@ declares a full StepSpec, documents every parameter, and renders through
 describe(). This is what keeps every step file consistent and instructive.
 """
 
-from __future__ import annotations
-
 import dataclasses
 
 import pytest

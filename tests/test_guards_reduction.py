@@ -11,8 +11,6 @@ never reach the runtime loop they would otherwise hang.
 # pylint reads as shadowing.
 # pylint: disable=redefined-outer-name
 
-from __future__ import annotations
-
 import pytest
 
 from csiphon import (

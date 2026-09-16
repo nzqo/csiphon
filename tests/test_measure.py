@@ -1,7 +1,5 @@
 """Measured runs: per-step time, output shape, memory, and named groups."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 

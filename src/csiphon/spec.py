@@ -11,8 +11,6 @@ It has two uses:
   and the runtime check can never drift apart.
 """
 
-from __future__ import annotations
-
 import dataclasses
 import json
 from collections.abc import Sequence
@@ -58,7 +56,8 @@ class Streaming(StrEnum):
                 return Status.WARN
             case Streaming.UNAVAILABLE:
                 return Status.BAD
-            case _:  # a new Streaming member without a status here
+            # A new Streaming member without a status here fails type-checking.
+            case _:
                 assert_never(self)
 
     @property
@@ -72,7 +71,8 @@ class Streaming(StrEnum):
                 return "a different online computation; result differs from batch"
             case Streaming.UNAVAILABLE:
                 return "no online version; needs the whole recording"
-            case _:  # a new Streaming member without a gloss here
+            # A new Streaming member without a gloss here fails type-checking.
+            case _:
                 assert_never(self)
 
 
@@ -214,7 +214,8 @@ class ParamInfo:
 # -----------------------------------------------------------------------------
 # Rendered description
 # -----------------------------------------------------------------------------
-_WIDTH = 68  # divider width in columns
+# Divider width in columns.
+_WIDTH = 68
 _LABELS = ("accepts", "requires", "produces", "streaming")
 _LABEL_W = max(len(label) for label in _LABELS)
 
@@ -733,6 +734,10 @@ def _param_info(field: dataclasses.Field[Any], instance: object | None) -> Param
     elif field.default_factory is not dataclasses.MISSING:
         default = field.default_factory()
 
+    # `field.type` is the annotation as written ("AxisName", "int | None") only
+    # when the step's module defers annotations (`from __future__ import
+    # annotations`); an evaluated type would render as "<enum 'AxisName'>". Step
+    # files keep that import for this reason.
     value = getattr(instance, field.name) if instance is not None else None
     return ParamInfo(
         name=field.name,

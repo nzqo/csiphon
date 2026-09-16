@@ -6,8 +6,6 @@ against an AcquisitionProfile into a Siphon, then run it over a whole recording
 chunk by chunk (`siphon.stream()`). A run returns Outlets, the named results.
 """
 
-from __future__ import annotations
-
 from csiphon.core import (
     AcquisitionProfile,
     Axis,

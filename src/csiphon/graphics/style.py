@@ -7,8 +7,6 @@ onto palette colors; build your own Theme and pass it to
 everything. Terminal output uses 24-bit ("truecolor") ANSI.
 """
 
-from __future__ import annotations
-
 import os
 import sys
 from dataclasses import dataclass
@@ -81,9 +79,11 @@ class Color:
 class Status(Enum):
     """A traffic-light status a state can carry: good, caution, or blocked."""
 
-    OK = "ok"  # a good / safe state
+    # fmt: off
+    OK   = "ok"    # a good / safe state
     WARN = "warn"  # a caution state
-    BAD = "bad"  # a blocked state
+    BAD  = "bad"   # a blocked state
+    # fmt: on
 
 
 class Vibrant:  # pylint: disable=too-few-public-methods  # a palette namespace

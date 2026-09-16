@@ -86,9 +86,10 @@ class AxisReference(PointwiseStep):
         category=Category.CALIBRATION,
         admissible_values=(ValueKind.COMPLEX,),
         admissible_reprs=None,
-        # The required axis is chosen at run time; see resolve_required_axes.
+        # The required axis and the layout effect (relabels, and resizes in some
+        # modes) are chosen at run time; see the resolve_* methods below.
         requires_axes=(),
-        layout_effect=CONFIG_DEPENDENT,  # relabels, and resizes some modes; see resolve
+        layout_effect=CONFIG_DEPENDENT,
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 

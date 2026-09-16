@@ -7,8 +7,6 @@ capture along that axis. A size-1 structural axis means "one", not "absent", and
 these tests pin that down at the level that actually broke: merging.
 """
 
-from __future__ import annotations
-
 import numpy as np
 
 from csiphon import (

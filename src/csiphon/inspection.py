@@ -8,8 +8,6 @@ its own module so it can import Step and Pipeline without a cycle (spec stays
 step-agnostic).
 """
 
-from __future__ import annotations
-
 from typing import overload
 
 from csiphon.core.semantics import ValueKind

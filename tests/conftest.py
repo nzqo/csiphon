@@ -3,8 +3,6 @@
 # idiom, which pylint reads as shadowing.
 # pylint: disable=redefined-outer-name
 
-from __future__ import annotations
-
 import dataclasses
 import inspect
 

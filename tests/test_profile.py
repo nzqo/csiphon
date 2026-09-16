@@ -6,14 +6,14 @@ one. Only the subcarrier count and the domain axes a step later adds vary in
 presence.
 """
 
-from __future__ import annotations
-
 import numpy as np
 
 from csiphon import AcquisitionProfile
 
 
 def _layout(**counts: int) -> str:
+    """The raw-CSI axes a profile with these device counts declares."""
+
     profile = AcquisitionProfile(subcarrier_indices=tuple(range(52)), **counts)
     return profile.raw_csi_layout().describe_axes()
 

@@ -1,7 +1,5 @@
 """Core data model: axes, layout, signal, acquisition profile, sampling."""
 
-from __future__ import annotations
-
 from csiphon.core.arrays import (
     ComplexArray,
     RealArray,

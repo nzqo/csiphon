@@ -1,7 +1,5 @@
 """Time-frequency steps: frequency / scale / time-frequency representations."""
 
-from __future__ import annotations
-
 from csiphon.steps.time_frequency.complex_stft import ComplexStftMagnitude
 from csiphon.steps.time_frequency.multitaper import Multitaper
 from csiphon.steps.time_frequency.synchrosqueezed_power import SynchrosqueezedPower

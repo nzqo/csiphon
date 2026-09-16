@@ -11,8 +11,6 @@ Its per-channel transform broadcasts over every channel axis, so the raw
 
 # Examples share small profile/signal setup blocks by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import numpy as np
 
 from csiphon import AcquisitionProfile, Pipeline

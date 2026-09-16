@@ -6,8 +6,6 @@ guards live in each step's ``output_layout``, so they fire at compile time (no
 signal or scipy needed to trigger them).
 """
 
-from __future__ import annotations
-
 import pytest
 
 from csiphon import AcquisitionProfile, Pipeline, Siphon

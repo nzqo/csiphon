@@ -1,7 +1,5 @@
 """Resampling steps: uniform-grid resampling, decimation, and loss simulation."""
 
-from __future__ import annotations
-
 from csiphon.steps.resampling.drop_samples import (
     Bursty,
     DropSamples,

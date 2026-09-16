@@ -2,8 +2,6 @@
 
 # Branch/merge setup overlaps with other modules by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import numpy as np
 import pytest
 
@@ -384,7 +382,7 @@ def test_trap_clogs_when_a_branch_stalls() -> None:
 
     empty = _feature_frame([], 0.0)  # branch 1 never arrives, so branch 0 piles up
 
-    # 2 samples held is within max_hold=3, so this push must NOT clog.
+    # 2 samples held is within max_hold=3, so this push must not clog.
     trap.push([_feature_frame([0.0, 1.0], 1.0), empty])
 
     # A second push takes it to 4 held, past max_hold=3, so now it clogs.

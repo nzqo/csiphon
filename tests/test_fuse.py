@@ -1,7 +1,5 @@
 """Fuse: combine branches that differ on one axis into a single feature vector."""
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 

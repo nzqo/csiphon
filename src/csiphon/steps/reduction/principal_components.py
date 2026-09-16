@@ -36,8 +36,10 @@ class PCABasis:
 
     # Real for real input; complex when fit on complex CSI (the projection in
     # `_project` stays consistent either way).
-    mean: SignalArray  # shape (n_features,)
-    components: SignalArray  # shape (n_components, n_features)
+    # fmt: off
+    mean       : SignalArray  # shape (n_features,)
+    components : SignalArray  # shape (n_components, n_features)
+    # fmt: on
 
 
 def fit_pca_basis(signal: Signal, axis: AxisName, n_components: int) -> PCABasis:
@@ -45,7 +47,8 @@ def fit_pca_basis(signal: Signal, axis: AxisName, n_components: int) -> PCABasis
 
     position = signal.layout.axis_position(axis)
     moved = np.moveaxis(signal.values, position, -1)
-    observations = moved.reshape(-1, moved.shape[-1])  # (observations, features)
+    # NOTE: Observation matrix shape is (observations, features).
+    observations = moved.reshape(-1, moved.shape[-1])
     mean = observations.mean(axis=0)
     _, _, right_singular_vectors = np.linalg.svd(
         observations - mean, full_matrices=False

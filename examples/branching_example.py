@@ -22,8 +22,6 @@ Runs with the base (numpy-only) install, no optional extras required.
 
 # Examples share small profile/signal setup blocks by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 from dataclasses import replace
 
 import numpy as np
@@ -79,6 +77,8 @@ def show_shapes(profile: AcquisitionProfile, signal: Signal) -> None:
     def draw_and_run(
         title: str, siphon: Siphon, feed: Signal | dict[str, Signal] | None = None
     ) -> None:
+        """Print the siphon's flow graph, then pour `feed` through it."""
+
         print(f"\n{title}\n")
         print(siphon.describe())
         # Single-input pipelines pour the one `signal`; a multi-inlet one is fed a

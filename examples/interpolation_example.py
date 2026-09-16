@@ -12,8 +12,6 @@ Only one subcarrier is used so the wave plots as a simple line. Numpy-only.
 
 # Examples share small profile/signal setup blocks by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import sys
 
 import numpy as np
@@ -59,6 +57,8 @@ def _chart(
     grid = [[" "] * width for _ in range(height)]
 
     def place(times: np.ndarray, values: np.ndarray, mark: str, colour: str) -> None:
+        """Draw `mark` at each (time, value) point of the canvas."""
+
         for time, value in zip(times, values, strict=True):
             column = int(time * (width - 1))  # time runs 0..1 s
             row = int((1.15 - value) / 2.3 * (height - 1))  # value runs -1..1

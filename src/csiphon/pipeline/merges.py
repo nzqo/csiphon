@@ -44,7 +44,8 @@ from csiphon.pipeline._align_ops import (
 from csiphon.pipeline.sequence import Sequence, SequenceTrap, reject_sequence_streaming
 from csiphon.spec import Category, LayoutEffect, StepSpec, Streaming
 
-DEFAULT_MAX_HOLD = 100_000  # samples a branch may hold unaligned before a ClogError
+# Samples a branch may hold unaligned before a ClogError.
+DEFAULT_MAX_HOLD = 100_000
 
 
 class MergeStrategy(ABC):
@@ -352,8 +353,11 @@ class Alignment(ABC):
     """
 
     streaming: ClassVar[Streaming]
-    on: Coordinate  # how branches are matched up: by time, or by packet number
-    reference: int = 0  # which branch's timeline leads (0 = the first branch)
+
+    # fmt: off
+    on        : Coordinate  # how branches are matched up: by time, or by packet number
+    reference : int = 0     # which branch's timeline leads (0 = the first branch)
+    # fmt: on
 
     def validate_branches(self, _count: int) -> None:  # noqa: B027 (optional hook)
         """Check this alignment can run over a branch count (default: always can)."""
@@ -521,9 +525,11 @@ class Hold(Alignment):
 class Junction:
     """The N->1 join: line branches up in time (`align`), then combine (`strategy`)."""
 
-    strategy: MergeStrategy
-    align: Alignment = field(default_factory=Exact)
-    max_hold: int = DEFAULT_MAX_HOLD  # unaligned samples per branch before a ClogError
+    # fmt: off
+    strategy : MergeStrategy
+    align    : Alignment = field(default_factory=Exact)
+    max_hold : int       = DEFAULT_MAX_HOLD  # unaligned samples allowed per branch
+    # fmt: on
 
     spec: ClassVar[StepSpec] = StepSpec(
         name="merge",

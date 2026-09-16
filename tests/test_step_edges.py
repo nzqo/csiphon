@@ -6,8 +6,6 @@ zeros, and an empty recording -- are handled without surprises. They read as the
 contract a new step must not break.
 """
 
-from __future__ import annotations
-
 import numpy as np
 
 from csiphon import (

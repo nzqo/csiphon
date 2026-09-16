@@ -11,8 +11,6 @@ This helper is that loop. It keeps every step's core math a plain, readable 2-D
 function and gathers the axis bookkeeping in one place.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 
 import numpy as np

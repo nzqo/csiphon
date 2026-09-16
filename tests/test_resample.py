@@ -6,8 +6,6 @@ the output values. Complex-specific behaviour (PolarLinear) and streaming equiva
 get their own cases.
 """
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 from conftest import stream_in_chunks
@@ -138,6 +136,8 @@ def test_polar_linear_keeps_magnitude_where_cartesian_linear_shrinks_it() -> Non
     signal = profile.raw_signal(np.array([[1 + 0j], [0 + 1j]]), np.array([0.0, 1.0]))
 
     def midpoint(fill: FillMethod) -> complex:
+        """The value `fill` produces halfway between the two samples."""
+
         out = (
             Pipeline()
             .then(Resample(step_s=0.5, fill=fill))

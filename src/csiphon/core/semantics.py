@@ -5,8 +5,6 @@ pipelines (for example, taking the decibels of an already-complex tensor)
 before any numerical work runs.
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 

@@ -4,8 +4,6 @@ Classic STFT (microdoppler) pipeline
 Needs the ``[filters]`` extra (scipy) for the STFT step.
 """
 
-from __future__ import annotations
-
 import numpy as np
 
 from csiphon import AcquisitionProfile, AxisName, Pipeline

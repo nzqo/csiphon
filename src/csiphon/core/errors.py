@@ -1,7 +1,5 @@
 """Exceptions raised by layouts, steps, and pipeline compilation."""
 
-from __future__ import annotations
-
 
 class LayoutError(ValueError):
     """A signal layout does not satisfy a step's structural requirements."""

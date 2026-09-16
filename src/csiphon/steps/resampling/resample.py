@@ -109,6 +109,8 @@ class Linear(FillMethod):
         """Interpolate each channel linearly; complex data goes real and imag apart."""
 
         def fill(column: SignalArray) -> SignalArray:
+            """Linear interpolation of one channel, real and imaginary parts apart."""
+
             if np.iscomplexobj(column):
                 real = np.interp(grid, source_times, column.real)
                 imag = np.interp(grid, source_times, column.imag)
@@ -138,6 +140,8 @@ class PolarLinear(FillMethod):
         """Interpolate |x| and the unwrapped angle of x, then recombine."""
 
         def fill(column: SignalArray) -> SignalArray:
+            """Interpolate one channel's magnitude and unwrapped phase apart."""
+
             complex_column = as_complex_array(column)
             magnitude = np.interp(grid, source_times, np.abs(complex_column))
             phase = np.interp(grid, source_times, np.unwrap(np.angle(complex_column)))
@@ -162,6 +166,8 @@ class CubicSpline(FillMethod):
         spline = _cubic_spline()
 
         def fill(column: SignalArray) -> SignalArray:
+            """Cubic-spline one channel, real and imaginary parts apart."""
+
             if np.iscomplexobj(column):
                 real = spline(source_times, column.real, extrapolate=True)(grid)
                 imag = spline(source_times, column.imag, extrapolate=True)(grid)
@@ -332,8 +338,10 @@ class _GridOperator(StreamOperator):
         self._step_s = step_s
         self._out_layout = out_layout
         self._start: float | None = None
-        self._next_k = 0  # the next grid index not yet emitted
-        self._carry: Signal | None = None  # the most recent sample, for look-back
+        # The next grid index not yet emitted, and the most recent sample kept
+        # for look-back.
+        self._next_k = 0
+        self._carry: Signal | None = None
 
     def push(self, chunk: Signal) -> Signal:
         """Emit the grid points now covered, filled from the carried + new samples."""
@@ -342,16 +350,18 @@ class _GridOperator(StreamOperator):
         if time_index is None or chunk.n_samples == 0:
             return empty_signal(self._out_layout)
 
+        # The grid is anchored on the first sample ever seen.
         start = self._start
         if start is None:
-            start = self._start = float(chunk.times[0])  # anchor on the first sample
+            start = self._start = float(chunk.times[0])
         last_k = _last_grid_index(float(chunk.times[-1]), start, self._step_s)
 
         # The look-back source is the carried previous sample plus this chunk; only
         # build it when a grid point is actually due (else just carry forward).
         carry, self._carry = self._carry, _last_sample(chunk, time_index)
+        # No new grid point reached yet.
         if last_k < self._next_k:
-            return empty_signal(self._out_layout)  # no new grid point reached yet
+            return empty_signal(self._out_layout)
 
         source = chunk if carry is None else concat_time(carry, chunk)
         grid = as_real_array(start + np.arange(self._next_k, last_k + 1) * self._step_s)

@@ -1,7 +1,5 @@
 """Baseline steps: estimate and subtract a temporal baseline."""
 
-from __future__ import annotations
-
 from csiphon.steps.baseline.running_mean_subtract import RunningMeanSubtract
 from csiphon.steps.baseline.temporal_mean_subtract import TemporalMeanSubtract
 

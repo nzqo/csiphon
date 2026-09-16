@@ -1,7 +1,5 @@
 """Calibration steps: axis-reference combinations and phase-ramp removal."""
 
-from __future__ import annotations
-
 from csiphon.steps.calibration.axis_reference import AxisReference, Combine, Reference
 from csiphon.steps.calibration.linear_phase_correction import (
     LinearPhaseCorrection,

@@ -11,8 +11,6 @@ Runs with the base (numpy-only) install.
 
 # Examples share small profile/signal setup blocks by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 from collections.abc import Callable
 
 from csiphon import AcquisitionProfile, AxisName, Pipeline
@@ -62,6 +60,8 @@ def main() -> None:
     # 3. Streaming refusal. Fit-on-the-recording PCA needs every sample, so it
     #    has no streaming variant: it compiles fine but cannot be streamed.
     def stream_a_batch_only_pipeline() -> None:
+        """Open a stream on a siphon whose PCA fits on the whole recording."""
+
         compiled = (
             Pipeline()
             .then(Magnitude())

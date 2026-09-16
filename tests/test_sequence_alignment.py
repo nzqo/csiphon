@@ -1,7 +1,5 @@
 """Aligning merges on packet (sequence) numbers, with wrap-around handling."""
 
-from __future__ import annotations
-
 from dataclasses import replace
 
 import numpy as np
@@ -194,6 +192,8 @@ def test_streaming_hold_on_sequence_equals_batch(chunk: int) -> None:
     batch = siphon.pour(rx0=a, rx1=b).single()
 
     def piece(signal: Signal, start: int) -> Signal:
+        """One chunk of `signal`, starting at sample `start`."""
+
         stop = start + chunk
         return Signal(
             values=signal.values[start:stop],

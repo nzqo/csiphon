@@ -41,9 +41,10 @@ class SelectAxis(PointwiseStep):
         category=Category.REDUCTION,
         admissible_values=None,
         admissible_reprs=None,
-        # The required axis is chosen at run time; see resolve_required_axes.
+        # The required axis, and so the layout effect (that axis is resized), is
+        # chosen at run time; see the resolve_* methods below.
         requires_axes=(),
-        layout_effect=CONFIG_DEPENDENT,  # resizes the chosen axis; see resolve below
+        layout_effect=CONFIG_DEPENDENT,
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 

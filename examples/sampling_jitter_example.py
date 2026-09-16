@@ -10,8 +10,6 @@ Runs with the base (numpy-only) install.
 
 # Examples share small profile/signal setup blocks by design.
 # pylint: disable=duplicate-code
-from __future__ import annotations
-
 import warnings
 
 import numpy as np

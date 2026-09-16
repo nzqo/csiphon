@@ -2,6 +2,7 @@
 
 # The windowed-reduction skeleton overlaps with the sibling statistics step by design.
 # pylint: disable=duplicate-code
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -92,6 +93,8 @@ def _covariance_frame(shrinkage: float, feature_pos: int) -> FrameFn:
     """A frame function: one window to spectrum stats, per non-time channel."""
 
     def frame(block: SignalArray) -> RealArray:
+        """The covariance eigenspectrum of one window."""
+
         # The shared window signature is complex-capable; this stat is real-only.
         # Run the 2-D stats along the chosen axis, broadcasting the other axes.
         return broadcast_channels(
@@ -130,9 +133,10 @@ class CovarianceSpectrum(Step):
         category=Category.STATISTICS,
         admissible_values=(ValueKind.MAGNITUDE, ValueKind.REAL, ValueKind.POWER),
         admissible_reprs=None,
-        # The axis to summarize is chosen at run time; see resolve_* below.
+        # The axis to summarize, and so the layout effect (that axis becomes
+        # stats), is chosen at run time; see the resolve_* methods below.
         requires_axes=(),
-        layout_effect=CONFIG_DEPENDENT,  # the chosen axis becomes stats; see resolve
+        layout_effect=CONFIG_DEPENDENT,
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 

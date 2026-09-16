@@ -13,8 +13,6 @@ compile time to size their output; steps that do not touch time spacing ignore
 it entirely.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 import numpy as np
