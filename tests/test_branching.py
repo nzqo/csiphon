@@ -161,6 +161,24 @@ def test_probe_keeps_an_intermediate_as_an_outlet(
     assert np.allclose(out["mag"].values, magnitude.values)
 
 
+def test_probe_on_a_line_that_branches_keeps_its_values(
+    profile: AcquisitionProfile, raw_signal: Signal
+) -> None:
+    """A probed line read by two later branches is still returned whole by pour."""
+
+    siphon = (
+        Pipeline()
+        .then(Magnitude())
+        .probe("mag")
+        .branch(a=_var(0.05), b=_var(0.2))
+        .merge(using=Mean())
+    ).compile(profile)
+    out = siphon.pour(raw_signal)
+
+    magnitude = Pipeline().then(Magnitude()).compile(profile).pour(raw_signal).single()
+    assert np.allclose(out["mag"].values, magnitude.values)
+
+
 def test_nested_branches_compose(
     profile: AcquisitionProfile, raw_signal: Signal
 ) -> None:

@@ -211,6 +211,41 @@ class Sum(MergeStrategy):
         return as_signal_array(np.sum(np.stack(arrays, axis=0), axis=0))
 
 
+@dataclass(frozen=True, slots=True)
+class ComplexFromParts(MergeStrategy):
+    """Join a real-part branch and an imaginary-part branch into complex values.
+
+    The first branch is the real part, the second the imaginary part. Name them at
+    the merge so the order is explicit:
+    `.merge(["re", "im"], using=ComplexFromParts())`.
+    """
+
+    def output_layout(self, inputs: SequenceABC[Layout]) -> Layout:
+        """Require two matching real-valued branches; the result is complex."""
+
+        if len(inputs) != 2:
+            raise LayoutError(
+                "ComplexFromParts needs exactly two branches (real part, imaginary "
+                f"part), got {len(inputs)}."
+            )
+        _require_matching(inputs)
+        if inputs[0].values != ValueKind.REAL:
+            raise LayoutError(
+                "ComplexFromParts needs real-valued branches, got "
+                f"{inputs[0].values.value}."
+            )
+        return inputs[0].with_values(ValueKind.COMPLEX)
+
+    def combine(
+        self, arrays: SequenceABC[SignalArray], inputs: SequenceABC[Layout]
+    ) -> SignalArray:
+        """Return `real + 1j * imaginary`."""
+
+        del inputs
+        real, imaginary = arrays
+        return as_signal_array(real + 1j * imaginary)
+
+
 def _unify_values(kinds: SequenceABC[ValueKind]) -> ValueKind:
     """The value kind of fused branches: keep it if shared, else a common numeric kind.
 

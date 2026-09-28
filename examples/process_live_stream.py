@@ -1,10 +1,10 @@
-"""Streaming example: the same pipeline, fed frame by frame.
+"""Process a live stream: the same pipeline, fed chunks as they arrive.
 
 Demonstrates that a pipeline compiled once runs live over arbitrary chunks, and
 that (for these exact-streaming steps) the streamed result matches batch.
 """
 
-# The batch and streaming examples deliberately build the same pipeline.
+# This and process_whole_recording.py deliberately build the same pipeline.
 # pylint: disable=duplicate-code
 import numpy as np
 

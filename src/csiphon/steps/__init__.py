@@ -15,7 +15,14 @@ numpy-only.
 from csiphon.steps.baseline import RunningMeanSubtract, TemporalMeanSubtract
 from csiphon.steps.calibration import AxisReference, LinearPhaseCorrection
 from csiphon.steps.cleaning import NanScrub, NoiseFloorClip
-from csiphon.steps.components import Magnitude, Phase, Power, UnitPhase
+from csiphon.steps.components import (
+    ImagPart,
+    Magnitude,
+    Phase,
+    Power,
+    RealPart,
+    UnitPhase,
+)
 from csiphon.steps.delay import (
     ChannelImpulseResponse,
     DelayAutocorrelation,
@@ -89,6 +96,7 @@ __all__ = [
     "GainNormalize",
     "GlobalMaxNormalize",
     "Hold",
+    "ImagPart",
     "Independent",
     "Linear",
     "LinearPhaseCorrection",
@@ -107,6 +115,7 @@ __all__ = [
     "PolarLinear",
     "Power",
     "PrincipalComponents",
+    "RealPart",
     "Resample",
     "RobustPca",
     "RunningMeanSubtract",

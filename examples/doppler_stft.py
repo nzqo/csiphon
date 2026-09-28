@@ -1,5 +1,4 @@
-"""
-Classic STFT (microdoppler) pipeline
+"""Micro-Doppler spectrogram from a classic STFT pipeline.
 
 Needs the ``[filters]`` extra (scipy) for the STFT step.
 """
@@ -23,7 +22,7 @@ from csiphon.steps.temporal_features import Mode
 
 
 def build_doppler_pipeline() -> Pipeline:
-    """Rebuild the dataset script's active feature recipe with csiphon steps."""
+    """Build the STFT micro-Doppler feature pipeline."""
 
     return (
         Pipeline()

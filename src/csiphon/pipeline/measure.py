@@ -16,7 +16,13 @@ from typing import TYPE_CHECKING
 
 from csiphon.core.signal import Signal
 from csiphon.pipeline.merges import Junction
-from csiphon.pipeline.runners import Outlets, _run_node, _seed_inlets
+from csiphon.pipeline.runners import (
+    Outlets,
+    _run_node,
+    _seed_inlets,
+    last_readers,
+    release_spent_lines,
+)
 
 if TYPE_CHECKING:
     from csiphon.pipeline.pipeline import Node, Siphon
@@ -188,11 +194,14 @@ def measure(
         tracemalloc.start()
     try:
         env = _seed_inlets(siphon, signals, allow_partial=False)
+        last_reader = last_readers(siphon)
         steps: list[StepCost] = []
         for number, node in enumerate(siphon.nodes, start=1):
             inputs = [env[line] for line in node.inputs]
             env[node.output], cost = _measure_node(number, node, inputs, memory)
             steps.append(cost)
+            del inputs
+            release_spent_lines(env, siphon, node, number - 1, last_reader)
     finally:
         if tracing:
             tracemalloc.stop()

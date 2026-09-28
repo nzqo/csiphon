@@ -5,7 +5,7 @@ grouped by category:
 
 | Category | What lives here |
 |---|---|
-| `components/` | a direct per-value component: magnitude, phase, unit phase, power |
+| `components/` | a direct per-value component: magnitude, phase, unit phase, power, real and imaginary part |
 | `scaling/` | fixed pointwise scale / compression: log, decibels |
 | `cleaning/` | data hygiene: NaN scrubbing, noise-floor clipping |
 | `calibration/` | reference/phase-model artifact removal across a non-time axis |

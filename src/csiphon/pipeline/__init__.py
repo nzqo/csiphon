@@ -6,6 +6,7 @@ from csiphon.pipeline._align_ops import align_on_time
 from csiphon.pipeline.measure import GroupCost, MeasuredRun, StepCost
 from csiphon.pipeline.merges import (
     Alignment,
+    ComplexFromParts,
     Concatenate,
     Exact,
     Fuse,
@@ -24,6 +25,7 @@ from csiphon.pipeline.step import PointwiseStep, Step, StreamOperator
 
 __all__ = [
     "Alignment",
+    "ComplexFromParts",
     "Concatenate",
     "Exact",
     "Fuse",

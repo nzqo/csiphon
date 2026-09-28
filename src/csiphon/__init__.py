@@ -19,6 +19,7 @@ from csiphon.core import (
 from csiphon.inspection import describe
 from csiphon.pipeline import (
     Alignment,
+    ComplexFromParts,
     Concatenate,
     Exact,
     Fuse,
@@ -50,6 +51,7 @@ __all__ = [
     "Axis",
     "AxisName",
     "Category",
+    "ComplexFromParts",
     "Concatenate",
     "Description",
     "Exact",

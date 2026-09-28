@@ -15,7 +15,7 @@ from typing import ClassVar, cast
 
 import numpy as np
 
-from csiphon.core.arrays import RealArray, as_real_array
+from csiphon.core.arrays import RealArray, SignalArray, as_signal_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError, MissingDependencyError
 from csiphon.core.layout import Layout
@@ -71,7 +71,9 @@ class ButterworthFilter(Step):
     """Butterworth filter along the time axis.
 
     `cutoff_hz` is a scalar for `low` / `high` and a `(low, high)` pair
-    for `band`. Batch is zero-phase; streaming is causal.
+    for `band`. Batch is zero-phase; streaming is causal. Complex input is filtered
+    on its real and imaginary parts, the same filter on each. The explicit form is
+    `RealPart` / `ImagPart` branches merged with `ComplexFromParts`.
     """
 
     cutoff_hz: float | tuple[float, float] = field(
@@ -87,7 +89,12 @@ class ButterworthFilter(Step):
         name="butterworth-filter",
         summary="apply a Butterworth filter along time (zero-phase batch, causal stream)",  # noqa: E501
         category=Category.FILTERING,
-        admissible_values=(ValueKind.REAL, ValueKind.MAGNITUDE, ValueKind.POWER),
+        admissible_values=(
+            ValueKind.COMPLEX,
+            ValueKind.REAL,
+            ValueKind.MAGNITUDE,
+            ValueKind.POWER,
+        ),
         admissible_reprs=None,
         requires_axes=(AxisName.TIME,),
         layout_effect=LayoutEffect(),
@@ -138,7 +145,7 @@ class ButterworthFilter(Step):
             self.order, self.cutoff_hz, self.btype, rate_hz
         )
         filtered = scipy_signal.filtfilt(
-            numerator, denominator, as_real_array(signal.values), axis=time_index
+            numerator, denominator, as_signal_array(signal.values), axis=time_index
         )
         return signal.with_values(filtered, out_layout)
 
@@ -166,7 +173,7 @@ class _CausalFilter(StreamOperator):
         self._numerator = numerator
         self._denominator = denominator
         self._out_layout = out_layout
-        self._state: RealArray | None = None
+        self._state: SignalArray | None = None
 
     def push(self, chunk: Signal) -> Signal:
         """Filter this chunk causally, updating the filter state."""
@@ -176,7 +183,7 @@ class _CausalFilter(StreamOperator):
             return empty_signal(self._out_layout)
 
         scipy_signal = _scipy_signal()
-        data = np.moveaxis(as_real_array(chunk.values), time_index, 0)
+        data = np.moveaxis(as_signal_array(chunk.values), time_index, 0)
         flat = data.reshape(data.shape[0], -1)
 
         if self._state is None:
