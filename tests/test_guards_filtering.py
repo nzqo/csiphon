@@ -178,6 +178,28 @@ def test_delay_autocorrelation_rejects_uninferrable_nfft() -> None:
         _compile(wide, Magnitude(), DelayAutocorrelation())
 
 
+@pytest.mark.parametrize("kwargs", [{"first_tap": -1}, {"num_taps": 0}])
+def test_delay_autocorrelation_rejects_bad_tap_range(
+    profile: AcquisitionProfile, kwargs: dict[str, int]
+) -> None:
+    """A negative first tap or a non-positive tap count fails at compile."""
+
+    with pytest.raises(CompileError, match="delay-autocorrelation"):
+        _compile(profile, Magnitude(), DelayAutocorrelation(**kwargs))
+
+
+@pytest.mark.parametrize(
+    "kwargs", [{"first_tap": 62, "num_taps": 4}, {"first_tap": 64}]
+)
+def test_delay_autocorrelation_rejects_taps_beyond_nfft(
+    profile: AcquisitionProfile, kwargs: dict[str, int]
+) -> None:
+    """Taps past nfft-1 (64 for 52 subcarriers) fail at compile, naming the range."""
+
+    with pytest.raises(CompileError, match="exceed nfft 64"):
+        _compile(profile, Magnitude(), DelayAutocorrelation(**kwargs))
+
+
 # --- channel-impulse-response -------------------------------------------------
 
 

@@ -112,6 +112,59 @@ def test_delay_taps_pick_the_requested_taps_real_then_imag(profile, raw_signal) 
     assert np.allclose(taps.values, expected)
 
 
+def test_delay_autocorrelation_tap_range_is_a_slice_of_the_full_axis(
+    profile, raw_signal
+) -> None:
+    """DelayAutocorrelation(first_tap, num_taps) carries exactly those taps, with
+    the same values the full axis has at them."""
+
+    full = _run(profile, raw_signal, Magnitude(), DelayAutocorrelation())
+    ranged = _run(
+        profile,
+        raw_signal,
+        Magnitude(),
+        DelayAutocorrelation(first_tap=1, num_taps=3),
+    )
+
+    delay = ranged.layout.axis(AxisName.DELAY)
+    assert delay.size == 3
+    assert delay.coordinates == (1, 2, 3)
+    assert delay.unit == "tap"
+    position = full.layout.axis_position(AxisName.DELAY)
+    assert np.allclose(ranged.values, np.take(full.values, [1, 2, 3], axis=position))
+
+
+def test_delay_autocorrelation_open_tap_range_runs_to_the_last_tap(
+    profile, raw_signal
+) -> None:
+    """With num_taps left None, first_tap keeps every tap from there to nfft-1."""
+
+    out = _run(profile, raw_signal, Magnitude(), DelayAutocorrelation(first_tap=60))
+    assert out.layout.axis(AxisName.DELAY).coordinates == (60, 61, 62, 63)
+
+
+def test_delay_taps_after_a_tap_range_address_positions(profile, raw_signal) -> None:
+    """DelayTaps counts positions on the delay axis it is given, so after a
+    restricted DelayAutocorrelation the kept taps start at position 0."""
+
+    from_full = _run(
+        profile,
+        raw_signal,
+        Magnitude(),
+        DelayAutocorrelation(),
+        DelayTaps(first_tap=1, num_taps=3),
+    )
+    from_range = _run(
+        profile,
+        raw_signal,
+        Magnitude(),
+        DelayAutocorrelation(first_tap=1, num_taps=3),
+        DelayTaps(first_tap=0, num_taps=3),
+    )
+    assert from_range.layout == from_full.layout
+    assert np.allclose(from_range.values, from_full.values)
+
+
 def test_fold_antenna_and_delay(profile, raw_signal) -> None:
     """Folding merges the antenna and delay axes, antenna-major (C-order)."""
 

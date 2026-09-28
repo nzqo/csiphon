@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-28
+
+### Added
+
+- `DelayAutocorrelation` can compute just a range of taps. Computing every
+  tap and keeping a handful afterwards wastes most of the work, and for a
+  typical recording that stage dominated the whole pipeline. Pass `first_tap`
+  and `num_taps` to get only those taps; the delay axis then carries their
+  indices. Without them the step behaves as before and produces every tap. A
+  `DelayTaps` placed after a restricted step counts positions on that shorter
+  axis, so start it at `first_tap=0`.
+
+### Changed
+
+- `DelayAutocorrelation` is faster for the full axis as well, with identical
+  values. The projection onto the taps ran as one small matrix product per
+  sample; it now runs as a single large product over all samples, and as two
+  real products (for the real and the imaginary part of the kernel) instead
+  of one complex product.
+
 ## [0.3.0] - 2026-09-28
 
 ### Added
