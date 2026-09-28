@@ -68,12 +68,11 @@ anywhere along the pipeline.
   step's time and output shape (memory on request), per step or for a named
   group of consecutive steps.
 
-The built-in steps cover components, scaling, cleaning, calibration,
-normalization, baseline removal, filtering, temporal features, delay and
-time-frequency transforms, pooling, statistics, reduction, restructuring, and
-resampling. The
-[steps README](https://github.com/nzqo/csiphon/blob/main/src/csiphon/steps/README.md)
-lists the categories. Custom steps use the same contracts and inspection tools.
+Ready-made steps cover the usual CSI preprocessing stuff, from calibration and
+filtering to Doppler, temporal features, dimensionality reduction and resampling.
+See the [steps README](https://github.com/nzqo/csiphon/blob/main/src/csiphon/steps/README.md)
+for the full list. Custom steps use the same pipeline contracts.
+
 
 ## Install
 
