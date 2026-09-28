@@ -1,4 +1,4 @@
-"""Measure example: find out what each step of a run costs.
+"""Measure cost: find out what each step of a run costs.
 
 `siphon.measure()` pours a recording once and reports, per step, the wall time
 and the shape of the array it produced; `memory=True` adds the peak and added
@@ -8,7 +8,7 @@ consecutive steps to read as one stage, by step number or step name.
 Runs with the base (numpy-only) install, no optional extras required.
 """
 
-# The batch, streaming, and measure examples deliberately build the same pipeline.
+# The recording, live-stream, and measure examples deliberately build the same pipeline.
 # pylint: disable=duplicate-code
 import numpy as np
 

@@ -1,9 +1,9 @@
-"""Batch example: build a pipeline once, run it over a whole recording.
+"""Process a whole recording: build a pipeline once, pour the recording through it.
 
 Runs with the base (numpy-only) install, no optional extras required.
 """
 
-# The batch and streaming examples deliberately build the same pipeline.
+# This and process_live_stream.py deliberately build the same pipeline.
 # pylint: disable=duplicate-code
 import numpy as np
 

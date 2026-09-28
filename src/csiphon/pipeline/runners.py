@@ -150,10 +150,40 @@ def pour(siphon: Siphon, signals: Signal | Mapping[str, Signal]) -> Outlets:
     """Run a whole recording through a siphon and return every outlet."""
 
     env = _seed_inlets(siphon, signals, allow_partial=False)
-    for node in siphon.nodes:
+    last_reader = last_readers(siphon)
+    for index, node in enumerate(siphon.nodes):
         inputs = [env[line] for line in node.inputs]
         env[node.output] = _run_node(node, inputs)
+        del inputs
+        release_spent_lines(env, siphon, node, index, last_reader)
     return Outlets({display: env[line] for display, line in siphon.outlets.items()})
+
+
+def last_readers(siphon: Siphon) -> dict[str, int]:
+    """For every line, the index of the last node that reads it."""
+
+    return {
+        line: index for index, node in enumerate(siphon.nodes) for line in node.inputs
+    }
+
+
+def release_spent_lines(
+    env: dict[str, Signal],
+    siphon: Siphon,
+    node: Node,
+    index: int,
+    last_reader: Mapping[str, int],
+) -> None:
+    """Drop this node's input lines that no later node reads and no outlet shows.
+
+    A whole-recording run would otherwise hold every intermediate signal until the
+    end; for wide signals (many channels, spectrograms) that multiplies the memory.
+    """
+
+    outlet_lines = set(siphon.outlets.values())
+    for line in node.inputs:
+        if last_reader[line] == index and line not in outlet_lines:
+            env.pop(line, None)
 
 
 def _run_node(node: Node, inputs: list[Signal]) -> Signal:

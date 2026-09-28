@@ -3,11 +3,13 @@
 import numpy as np
 import pytest
 from conftest import fold_channels_into_feature
+from scipy.signal import butter, filtfilt
 
 from csiphon import AcquisitionProfile, Pipeline, Signal
 from csiphon.core import AxisName, CompileError, Representation, ValueKind
 from csiphon.steps import (
     AxisReference,
+    ButterworthFilter,
     ComplexStftMagnitude,
     DelayAutocorrelation,
     DelayTaps,
@@ -20,6 +22,7 @@ from csiphon.steps import (
     Power,
 )
 from csiphon.steps.calibration import Combine, Reference
+from csiphon.steps.filtering.butterworth_filter import Band
 
 
 def _run(profile: AcquisitionProfile, signal: Signal, *steps) -> Signal:
@@ -226,3 +229,14 @@ def test_global_max_normalize_preserves_layout_and_survives_zeros(
     assert out.layout.values == reference.layout.values  # structure unchanged
     assert np.all(np.isfinite(out.values))  # no divide-by-zero
     assert np.all(out.values == 0.0)
+
+
+def test_butterworth_filters_complex_csi_like_its_parts(profile, raw_signal) -> None:
+    """Complex CSI is filtered as is: the same as filtering real and imaginary apart."""
+
+    out = _run(profile, raw_signal, ButterworthFilter(cutoff_hz=5.0, btype=Band.HIGH))
+    numerator, denominator = butter(2, 5.0, btype="high", fs=profile.sampling_rate_hz)
+    real = filtfilt(numerator, denominator, raw_signal.values.real, axis=0)
+    imag = filtfilt(numerator, denominator, raw_signal.values.imag, axis=0)
+    assert np.iscomplexobj(out.values)
+    assert np.allclose(out.values, real + 1j * imag)

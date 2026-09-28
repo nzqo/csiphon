@@ -35,6 +35,24 @@ def test_measure_returns_the_same_outlets_as_pour(profile, raw_signal) -> None:
     assert np.array_equal(run.outlets.single().values, poured.single().values)
 
 
+def test_measure_returns_probe_outlets_like_pour(profile, raw_signal) -> None:
+    """A probed intermediate comes back from measure() exactly as from pour()."""
+
+    siphon = (
+        Pipeline()
+        .then(Magnitude())
+        .probe("mag")
+        .then(GainNormalize())
+        .then(WindowedVariance())
+    ).compile(profile)
+    run = siphon.measure(raw_signal, memory=True)
+    poured = siphon.pour(raw_signal)
+
+    assert set(run.outlets) == set(poured) == {"mag", "out"}
+    for name in poured:
+        assert np.array_equal(run.outlets[name].values, poured[name].values)
+
+
 def test_measure_reports_every_node_in_run_order(profile, raw_signal) -> None:
     """One StepCost per node (merges included), numbered as describe() numbers them."""
 

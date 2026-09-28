@@ -1,4 +1,4 @@
-"""Inspect blocks and whole pipelines with describe().
+"""Print step and pipeline contracts with describe().
 
 describe() works on:
 
@@ -7,10 +7,11 @@ describe() works on:
 - a compiled pipeline -> a summary of every structural transition
   (pass verbose=True to expand each step).
 
-Runs on the base (numpy-only) install. Run: python examples/inspect_example.py
+Runs on the base (numpy-only) install.
+Run: python examples/print_step_and_pipeline_contracts.py
 """
 
-# The example builds a small pipeline, like the batch/streaming examples do.
+# The example builds a small pipeline, like the recording and live-stream ones.
 # pylint: disable=duplicate-code
 from csiphon import AcquisitionProfile, AxisName, Pipeline, describe
 from csiphon.steps import (

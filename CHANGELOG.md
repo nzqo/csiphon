@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-28
+
+### Added
+
+- `RealPart` and `ImagPart` steps: the real and the imaginary part of complex
+  values, as real-valued signals.
+- `ComplexFromParts` merge: joins a real-part branch and an imaginary-part branch
+  back into complex values. The first branch is the real part, so name them at
+  the merge: `.merge(["re", "im"], using=ComplexFromParts())`.
+
+### Changed
+
+- `ButterworthFilter` accepts complex input and filters its real and imaginary
+  parts, the same filter on each.
+- `pour()` and `measure()` drop an intermediate result once no later step reads
+  it and it is not an outlet, instead of holding every intermediate until the run
+  ends. Outlets and probes are unaffected.
+- README: new introduction, PyPI install instructions, and coverage of receiver
+  merging, packet-loss simulation, and the `describe()` flow graph.
+- Examples are named after what they do (`batch_example.py` is now
+  `process_whole_recording.py`, `streaming_example.py` is now
+  `process_live_stream.py`, and so on). Merging receivers moved out of the
+  branching example into its own `merge_receivers.py`.
+
 ## [0.2.0] - 2026-09-16
 
 ### Added
@@ -48,7 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional extras: `filters` (scipy) and `sst` (ssqueezepy); the base install is
   numpy-only. Ships `py.typed`.
 
-[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nzqo/csiphon/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nzqo/csiphon/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/nzqo/csiphon/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/nzqo/csiphon/releases/tag/v0.1.0
