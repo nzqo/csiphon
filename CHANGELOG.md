@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-10
+
+### Added
+
+- `ComplexStftMagnitude` has three new options, all off by default:
+  - `edges="valid"`: batch keeps only full windows, as streaming does. Batch and
+    streaming then give the same values, windows and timestamps.
+  - `power=True`: output the squared magnitude.
+  - `mean_over`: average over these axes and remove them. Batch computes the
+    windows in blocks and averages each block, so the full spectrum of every
+    channel never exists at once. Streaming does the same per window.
+
+### Fixed
+
+- `ComplexStftMagnitude` with `nfft > window_size` crashed in batch mode on input
+  with more than one channel axis, such as raw CSI. Batch now uses the same
+  per-window code as streaming.
+
 ## [0.5.0] - 2026-11-10
 
 ### Added
@@ -121,7 +139,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional extras: `filters` (scipy) and `sst` (ssqueezepy); the base install is
   numpy-only. Ships `py.typed`.
 
-[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/nzqo/csiphon/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/nzqo/csiphon/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nzqo/csiphon/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/nzqo/csiphon/compare/v0.3.0...v0.3.1

@@ -4,11 +4,11 @@
 
 import numpy as np
 import pytest
+from conftest import fold_channels_into_feature, stream_in_chunks
 
 from csiphon import AcquisitionProfile, AxisName, Pipeline, Signal, Siphon
 from csiphon.core.errors import CompileError
 from csiphon.steps import ComplexStftMagnitude
-from tests.conftest import fold_channels_into_feature, stream_in_chunks
 
 pytest.importorskip("scipy")
 

@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+from conftest import stream_in_chunks
 
 from csiphon import AcquisitionProfile, AxisName, Pipeline, Signal
 from csiphon.core.errors import LayoutError
@@ -11,7 +12,6 @@ from csiphon.steps import (
     Magnitude,
     SelectAxis,
 )
-from tests.conftest import stream_in_chunks
 
 # A 40 MHz layout: 114 used subcarriers on a 128-point FFT grid, with a DC gap.
 _INDICES = tuple(range(-58, -1)) + tuple(range(2, 59))
