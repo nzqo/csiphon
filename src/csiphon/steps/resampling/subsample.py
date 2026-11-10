@@ -5,9 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import ClassVar
 
-import numpy as np
-
-from csiphon.core.arrays import as_real_array, as_signal_array
+from csiphon.core.arrays import SignalArray, as_real_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
@@ -15,6 +13,16 @@ from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.signal import Signal, empty_signal
 from csiphon.pipeline.step import Step, StreamOperator
 from csiphon.spec import Category, LayoutEffect, StepSpec, Streaming
+
+
+def _keep_every(
+    values: SignalArray, time_index: int, first: int, every: int
+) -> SignalArray:
+    """Return a view of every `every`-th sample along time, starting at `first`."""
+
+    selector = [slice(None)] * values.ndim
+    selector[time_index] = slice(first, None, every)
+    return values[tuple(selector)]
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,9 +65,10 @@ class SubsampleEvery(Step):
         time_index = signal.layout.dynamic_index
         if time_index is None or signal.n_samples == 0:
             return signal.with_values(signal.values, out_layout)
-        indices = np.arange(0, signal.n_samples, self.every)
-        values = as_signal_array(np.take(signal.values, indices, axis=time_index))
-        times = as_real_array(signal.times[indices])
+
+        # Views, not copies: the kept samples are not duplicated in memory.
+        values = _keep_every(signal.values, time_index, 0, self.every)
+        times = as_real_array(signal.times[:: self.every])
         return signal.with_values(values, out_layout, times=times)
 
     def stream(
@@ -89,12 +98,11 @@ class _EveryNOperator(StreamOperator):
         # The first kept sample in this chunk is the one whose global index is the
         # next multiple of `every`; from there, every Nth sample.
         first = (-self._seen) % self._every
-        local = np.arange(first, chunk.n_samples, self._every)
         self._seen += chunk.n_samples
-        if local.size == 0:
+        if first >= chunk.n_samples:
             return empty_signal(self._out_layout)
-        values = as_signal_array(np.take(chunk.values, local, axis=time_index))
-        times = as_real_array(chunk.times[local])
+        values = _keep_every(chunk.values, time_index, first, self._every)
+        times = as_real_array(chunk.times[first :: self._every])
         return chunk.with_values(values, self._out_layout, times=times)
 
     def flush(self) -> Signal:

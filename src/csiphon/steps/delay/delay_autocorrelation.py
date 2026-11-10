@@ -158,13 +158,20 @@ class DelayAutocorrelation(PointwiseStep):
         kernel = np.exp(1j * 2.0 * np.pi * np.outer(subcarriers, taps) / nfft)
 
         # Inverse DFT of the power |H|^2 across subcarriers, divided by their count
-        # so it is a mean. By Wiener-Khinchin, this is the autocorrelation. The
-        # power is flattened to one (rows, subcarriers) matrix and multiplied by
-        # the real and the imaginary part of the kernel separately: two real
-        # GEMMs over one large matrix run several times faster than a complex
-        # GEMM batched over the leading axes, for the same result.
-        power = (np.abs(amplitude) ** 2).reshape(-1, amplitude.shape[-1])
-        coefficients = power @ kernel.real + 1j * (power @ kernel.imag)
+        # so it is a mean. By Wiener-Khinchin, this is the autocorrelation.
+        #
+        # The input is real (a magnitude or real values), so the power is its
+        # square. It is flattened to one (rows, subcarriers) matrix. The real and
+        # the imaginary part of the kernel sit side by side, so a single real
+        # matrix product gives both parts of every tap and reads the big matrix
+        # once. This runs several times faster than a complex product batched over
+        # the leading axes. Dividing the small kernel by the subcarrier count here
+        # makes the product a mean.
+        power = np.square(amplitude).reshape(-1, amplitude.shape[-1])
+        kernel = kernel / amplitude.shape[-1]
+        real_and_imag = power @ np.concatenate([kernel.real, kernel.imag], axis=1)
+        coefficients = (
+            real_and_imag[:, : taps.size] + 1j * real_and_imag[:, taps.size :]
+        )
         coefficients = coefficients.reshape(*amplitude.shape[:-1], taps.size)
-        coefficients /= amplitude.shape[-1]
         return as_signal_array(np.moveaxis(coefficients, -1, position))

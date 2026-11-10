@@ -81,27 +81,51 @@ class _CumulativeMeanOperator(StreamOperator):
         if self._time_index is None or chunk.n_samples == 0:
             return empty_signal(self._out_layout)
 
-        # The time axis can sit anywhere in the layout. Moving it to the front lets
-        # us walk the samples one by one as data[index].
+        # The time axis can sit anywhere in the layout. Moving it to the front makes
+        # data[index] the sample at that index.
         data = np.moveaxis(as_real_array(chunk.values), self._time_index, 0)
-        output = np.empty_like(data)
-        mean = np.zeros_like(data[0]) if self._mean is None else self._mean
 
-        for index in range(data.shape[0]):
-            self._count += 1
+        # The mean after each sample, that sample included. Keep the last one (and
+        # the count) for the next chunk.
+        means = self._running_means(data)
+        self._count += data.shape[0]
+        self._mean = means[-1].copy()
 
-            # Weighting each new sample by 1 / count keeps `mean` the exact average
-            # of all samples so far. Once 1 / count drops below min_alpha the weight
-            # stays there, and from then on old samples fade out exponentially.
-            weight = max(1.0 / self._count, self._min_alpha)
-            mean = mean + weight * (data[index] - mean)
-            output[index] = data[index] - mean
-
-        self._mean = mean
+        # Subtract in place: `means` becomes the output, so no further array is
+        # allocated.
+        np.subtract(data, means, out=means)
 
         # Move time back to where it was, so the output keeps the input's layout.
-        restored = np.moveaxis(output, 0, self._time_index)
+        restored = np.moveaxis(means, 0, self._time_index)
         return chunk.with_values(restored, self._out_layout)
+
+    def _running_means(self, data: RealArray) -> RealArray:
+        """Return the mean after each sample, continuing from the previous chunk."""
+
+        n_samples = data.shape[0]
+        counts = self._count + np.arange(1, n_samples + 1)
+        previous_mean = np.zeros_like(data[0]) if self._mean is None else self._mean
+        means = np.empty_like(data)
+
+        # A new sample has the weight 1 / count while that is at least min_alpha,
+        # which keeps the mean the exact average of all samples so far. From then
+        # on the weight stays at min_alpha and old samples fade out exponentially.
+        n_exact = int(np.count_nonzero(1.0 / counts >= self._min_alpha))
+
+        # Exact part: (sum of all earlier samples + running sum of this chunk) / count.
+        if n_exact > 0:
+            counts_shape = (-1,) + (1,) * (data.ndim - 1)
+            np.cumsum(data[:n_exact], axis=0, out=means[:n_exact])
+            means[:n_exact] += self._count * previous_mean
+            means[:n_exact] /= counts[:n_exact].reshape(counts_shape)
+
+        # Exponential part: each mean depends on the one before, so this is a loop.
+        mean = means[n_exact - 1] if n_exact > 0 else previous_mean
+        for index in range(n_exact, n_samples):
+            mean = mean + self._min_alpha * (data[index] - mean)
+            means[index] = mean
+
+        return means
 
     def flush(self) -> Signal:
         """Nothing is buffered beyond the mean."""

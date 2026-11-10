@@ -72,5 +72,10 @@ class GainNormalize(PointwiseStep):
 
         position = signal.layout.axis_position(self.axis)
         data = as_signal_array(values)
-        mean = np.mean(np.abs(data), axis=position, keepdims=True)
+
+        # A magnitude or a power is never negative, so taking abs again would change
+        # nothing. Skipping it saves a pass over the largest array of the step.
+        non_negative = signal.layout.values in (ValueKind.MAGNITUDE, ValueKind.POWER)
+        magnitude = data if non_negative else np.abs(data)
+        mean = np.mean(magnitude, axis=position, keepdims=True)
         return as_signal_array(data / (mean + self.epsilon))
