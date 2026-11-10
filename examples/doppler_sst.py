@@ -1,4 +1,4 @@
-"""Synchrosqueezed Doppler power: the SST front-end, needing the [sst] extra.
+"""Synchrosqueezed Doppler power, needing the [sst] extra.
 
 SynchrosqueezedPower is the only step here that pulls an optional dependency
 (ssqueezepy). Install it with:  pip install 'csiphon[sst]'. Without the extra the

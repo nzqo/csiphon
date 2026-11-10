@@ -87,7 +87,9 @@ class ButterworthFilter(Step):
 
     spec: ClassVar[StepSpec] = StepSpec(
         name="butterworth-filter",
-        summary="apply a Butterworth filter along time (zero-phase batch, causal stream)",  # noqa: E501
+        summary=(
+            "apply a Butterworth filter along time (zero-phase batch, causal stream)"
+        ),
         category=Category.FILTERING,
         admissible_values=(
             ValueKind.COMPLEX,

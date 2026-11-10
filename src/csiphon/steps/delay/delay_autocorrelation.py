@@ -7,7 +7,7 @@ from typing import ClassVar
 
 import numpy as np
 
-from csiphon.core.arrays import SignalArray, as_signal_array
+from csiphon.core.arrays import RealArray, SignalArray, as_real_array, as_signal_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
@@ -40,21 +40,43 @@ def resolve_nfft(n_subcarriers: int, nfft: int | None = None) -> int:
     )
 
 
+def subcarrier_indices_of(layout: Layout, profile: AcquisitionProfile) -> RealArray:
+    """Return the physical subcarrier indices of the signal's subcarrier axis.
+
+    We read them from the axis coordinates, so a SelectAxis upstream is respected.
+    Without coordinates we use the profile's indices, which only fits if the axis
+    still has all of the profile's subcarriers.
+    """
+
+    axis = layout.require_static_axis(AxisName.SUBCARRIER)
+    if axis.coordinates is not None:
+        return as_real_array(np.asarray(axis.coordinates, dtype=float))
+    if axis.size == profile.n_subcarriers:
+        return as_real_array(np.asarray(profile.subcarrier_indices, dtype=float))
+    raise LayoutError(
+        f"the subcarrier axis has {axis.size} positions but no coordinates, and "
+        f"the profile has {profile.n_subcarriers} subcarriers; cannot tell which "
+        "subcarrier indices the data carries."
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class DelayAutocorrelation(PointwiseStep):
-    """Delay-domain autocorrelation of the channel, from the subcarrier power.
+    """Autocorrelation of the channel impulse response, from the subcarrier power.
 
-    It squares the input to power (one value per subcarrier), then takes the
-    inverse DFT of that power across the subcarriers. By the Wiener-Khinchin
-    relation, the inverse DFT of the power spectrum is the autocorrelation of the
-    channel impulse response. So the output is that autocorrelation, one complex
-    value per delay tap. By default that is every tap (0 .. nfft-1); `first_tap`
-    and `num_taps` restrict it to a range, which costs only that range.
+    We square the input to get the power per subcarrier, then take the inverse DFT
+    of that power over the subcarriers. By the Wiener-Khinchin relation, the result
+    is the autocorrelation of the channel impulse response: one complex value per
+    delay tap. By default we return all taps (0 to nfft-1). If `first_tap` or
+    `num_taps` is set, we compute only that range of taps.
 
-    The basis uses the physical subcarrier indices, so this is tied to the
-    subcarrier axis (not axis-generic). To get the actual impulse response
-    instead of its autocorrelation, use ChannelImpulseResponse. To turn the taps
-    into real features, follow with DelayTaps.
+    The DFT uses the subcarrier indices of the input axis, so this step only works
+    on the subcarrier axis. That axis may have been reduced earlier (e.g. by
+    SelectAxis). If `nfft` is None, we infer it from the profile, not from the
+    reduced axis.
+
+    The output is complex. For real values, follow with Magnitude, RealPart or
+    ImagPart. For the impulse response itself, use ChannelImpulseResponse.
     """
 
     nfft: int | None = field(
@@ -102,6 +124,10 @@ class DelayAutocorrelation(PointwiseStep):
         self.require_inputs(layout)
         layout.require_static_axis(AxisName.SUBCARRIER)
 
+        # Fail at compile time if the subcarrier indices cannot be determined.
+        subcarrier_indices_of(layout, profile)
+
+        # The profile (the whole channel), not the kept count, sets the FFT grid.
         nfft = resolve_nfft(profile.n_subcarriers, self.nfft)
         taps = self.kept_taps(nfft)
         delay = Axis.static(AxisName.DELAY, tuple(taps), unit="tap")
@@ -126,7 +152,7 @@ class DelayAutocorrelation(PointwiseStep):
 
         # kernel[k, t] = exp(2j*pi*k*t/nfft): the inverse-DFT basis from subcarrier
         # index k to delay tap t, for the kept taps only.
-        subcarriers = np.asarray(profile.subcarrier_indices, dtype=float)
+        subcarriers = subcarrier_indices_of(signal.layout, profile)
         nfft = resolve_nfft(profile.n_subcarriers, self.nfft)
         taps = np.asarray(self.kept_taps(nfft))
         kernel = np.exp(1j * 2.0 * np.pi * np.outer(subcarriers, taps) / nfft)

@@ -3,8 +3,7 @@
 The per-step tests pin each step on its own; this pins the numbers the whole
 chain produces on a fixed synthetic recording, so a change in one step's output
 convention that the next step silently accepts still shows up. The values were
-generated while the pipeline matched the reference implementation it was ported
-from (`cpd.compute_features` in split-decision-lite).
+generated while the pipeline matched the reference implementation I ported from.
 """
 
 import numpy as np

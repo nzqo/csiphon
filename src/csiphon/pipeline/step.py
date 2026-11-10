@@ -71,7 +71,7 @@ class Step(ABC):
 
         Like `resolve_required_axes`, this refines the class-level spec for steps
         whose accepted value kinds depend on how they are configured (for example
-        a step whose `mode` decides whether it needs complex input). A step whose
+        a step whose need for complex input depends on its `mode`). A step whose
         spec marks this CONFIG_DEPENDENT must override this to give a concrete
         answer; otherwise the static spec value is returned.
         """

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-10
+
+### Added
+
+- `ComplexStftMagnitude` has three new options, all off by default:
+  - `nfft`: FFT length, at least `window_size`. Windows are zero-padded to it.
+  - `signed_bins=True`: keep the `freq_bins` bins nearest DC, negative
+    frequencies first.
+  - `symmetric_window=True`: use a symmetric Hann taper instead of the periodic one.
+
+### Fixed
+
+- `DelayAutocorrelation` and `ChannelImpulseResponse` failed after a
+  `SelectAxis` on the subcarriers. They now use the subcarrier indices of the
+  input axis. If `nfft` is None, it is still inferred from the profile.
+- `ComplexStftMagnitude` gave wrong frequency labels to negative-frequency bins
+  when `freq_bins` was above `nfft / 2` and `signed_bins` was False. Only the
+  labels change, not the values.
+
 ## [0.4.0] - 2026-11-10
 
 ### Added
@@ -102,7 +121,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional extras: `filters` (scipy) and `sst` (ssqueezepy); the base install is
   numpy-only. Ships `py.typed`.
 
-[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/nzqo/csiphon/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nzqo/csiphon/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/nzqo/csiphon/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/nzqo/csiphon/compare/v0.2.0...v0.3.0

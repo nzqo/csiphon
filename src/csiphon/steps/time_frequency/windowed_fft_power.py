@@ -1,4 +1,4 @@
-"""Hann-windowed real-FFT power up to a Doppler band (STFT / SHARP front-end)."""
+"""Power spectrum of sliding Hann-tapered windows of a real signal."""
 # Every time->time-frequency-power step declares the same spec shape (TIME_FREQUENCY,
 # requires TIME, layout_effect adds FREQUENCY as POWER), so pylint reads this spec and
 # the synchrosqueezed-power one as clones.
@@ -32,7 +32,7 @@ from csiphon.steps._support.windowing import (
 
 @dataclass(frozen=True, slots=True)
 class WindowedFFTPower(Step):
-    """Hann-windowed rFFT power on a sliding grid, kept up to a Doppler band.
+    """Power spectrum of sliding Hann-tapered windows, up to `band_hz`.
 
     Needs a nominal sampling rate at compile time to size the frequency axis;
     actual timestamp jitter is tolerated (and warned about) at run time. Streams
@@ -52,7 +52,7 @@ class WindowedFFTPower(Step):
 
     spec: ClassVar[StepSpec] = StepSpec(
         name="windowed-fft-power",
-        summary="compute Hann-windowed rFFT power on a sliding grid, up to a Doppler band",  # noqa: E501
+        summary="power spectrum of sliding Hann-tapered windows, up to band_hz",
         category=Category.TIME_FREQUENCY,
         admissible_values=(ValueKind.REAL, ValueKind.MAGNITUDE, ValueKind.POWER),
         admissible_reprs=None,

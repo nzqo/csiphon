@@ -49,7 +49,7 @@ def main() -> None:
     csi = rng.standard_normal(shape) + 1j * rng.standard_normal(shape)
     signal = profile.raw_signal(csi, np.arange(shape[0]) / rate)
 
-    # Two stages: the clean-up front-end, by step name (a step's `spec.name`, the
+    # Two stages: the clean-up, by step name (a step's `spec.name`, the
     # id describe() prints; a name that occurs twice in the pipeline is rejected,
     # use the number then), and the delay-domain feature extraction, by step
     # number (as describe() numbers the steps).

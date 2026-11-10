@@ -103,7 +103,7 @@ class DropSamples(Step):
     Drops a `loss_rate` fraction of the samples using `model`, keeping the survivors'
     own timestamps. With `keep_endpoints` (the default) the first and last sample are
     always kept, so the recording still spans its full time range, handy before a
-    Resample. `seed` fixes the randomness, so a given seed always drops the same set.
+    Resample. The same `seed` always drops the same set.
     Batch-only: it is an offline augmentation, and keeping the last sample needs the
     whole recording.
     """

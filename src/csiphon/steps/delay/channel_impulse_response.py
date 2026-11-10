@@ -16,24 +16,27 @@ from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
 from csiphon.spec import Category, LayoutEffect, StepSpec, Streaming
-from csiphon.steps.delay.delay_autocorrelation import resolve_nfft
+from csiphon.steps.delay.delay_autocorrelation import (
+    resolve_nfft,
+    subcarrier_indices_of,
+)
 
 
 def _cir_estimator(subcarriers: RealArray, num_taps: int, nfft: int) -> SignalArray:
-    """Delay estimator P (taps, subcarriers) with `h = P @ H`, via the pseudoinverse.
+    """Matrix P (taps, subcarriers) that maps the CSI H to the CIR: `h = P @ H`.
 
-    At the full DFT length P is the min-norm inverse, a plain inverse DFT of the
-    observed tones; a shorter `num_taps` makes it an over-determined least-squares
-    fit that assumes the CIR has only that many taps.
+    With the full number of taps, P is the inverse DFT restricted to the observed
+    subcarriers. With fewer `num_taps`, it is a least-squares fit that assumes the
+    CIR has only that many taps.
     """
 
-    tones = subcarriers[:, None]
+    indices = subcarriers[:, None]
     taps = np.arange(num_taps, dtype=float)[None, :]
 
-    # The forward model: how each delay tap shows up across the tones.
-    forward = np.exp(-1j * 2.0 * np.pi * tones * taps / nfft) / np.sqrt(nfft)
+    # The forward model: the CSI that each delay tap produces on each subcarrier.
+    forward = np.exp(-1j * 2.0 * np.pi * indices * taps / nfft) / np.sqrt(nfft)
 
-    # Invert it to recover the taps from the observed tones.
+    # Invert it to recover the taps from the observed CSI.
     return as_signal_array(np.linalg.pinv(forward))
 
 
@@ -41,11 +44,14 @@ def _cir_estimator(subcarriers: RealArray, num_taps: int, nfft: int) -> SignalAr
 class ChannelImpulseResponse(PointwiseStep):
     """Estimate the channel impulse response from the complex subcarrier CSI.
 
-    Inverts the observed complex tones to the delay domain, handling missing
+    Inverts the frequency response H[k] to the delay domain, handling missing
     subcarriers (a DC gap) correctly. With the default `num_taps=None` it returns
     the full CIR (one tap per DFT bin); set `num_taps` to fit a shorter,
     better-conditioned CIR when you know it is sparse. Pointwise in time, so it
     streams exactly.
+
+    Works on a reduced subcarrier axis (e.g. after SelectAxis). If `nfft` is None,
+    we infer it from the profile, not from the reduced axis.
     """
 
     num_taps: int | None = field(
@@ -73,14 +79,20 @@ class ChannelImpulseResponse(PointwiseStep):
     def _taps_and_nfft(self, profile: AcquisitionProfile) -> tuple[int, int]:
         """Resolve (num_taps, nfft): the full DFT length when num_taps is None."""
 
+        # The profile (the whole channel), sets the FFT grid.
+        # In case of subselection through AxisSelection or similar, set num_taps
+        # explicitly.
         nfft = resolve_nfft(profile.n_subcarriers, self.nfft)
+
         return (nfft if self.num_taps is None else self.num_taps), nfft
 
     def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
         """Replace the subcarrier axis with the estimated complex delay taps."""
 
         self.require_inputs(layout)
-        layout.require_static_axis(AxisName.SUBCARRIER)
+        # Fail at compile time if the subcarrier indices cannot be determined.
+        subcarrier_indices_of(layout, profile)
+
         num_taps, nfft = self._taps_and_nfft(profile)
         if not 1 <= num_taps <= nfft:
             raise LayoutError(
@@ -105,9 +117,10 @@ class ChannelImpulseResponse(PointwiseStep):
         channel = np.moveaxis(as_signal_array(values), position, -1)
 
         num_taps, nfft = self._taps_and_nfft(profile)
-        subcarriers = np.asarray(profile.subcarrier_indices, dtype=float)
+        subcarriers = subcarrier_indices_of(signal.layout, profile)
+
         # The estimator maps subcarriers to delay taps, so this matmul
-        # turns the CSI's tones into the estimated CIR.
+        # turns the CSI into the estimated CIR.
         estimator = _cir_estimator(subcarriers, num_taps, nfft)
         cir = channel @ estimator.T
         return as_signal_array(np.moveaxis(cir, -1, position))

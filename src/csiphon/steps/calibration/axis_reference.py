@@ -101,9 +101,9 @@ class AxisReference(PointwiseStep):
     def resolve_layout_effect(self) -> LayoutEffect:
         """Relabel to a ratio / cross-spectrum; shrink the axis when a position drops.
 
-        ADJACENT pairs each position with its predecessor (the first drops out), and
-        FIXED with `drop_reference` removes the reference position; plain FIXED keeps
-        the axis as it is.
+        In ADJACENT mode each position is paired with its predecessor, so the first
+        drops out. In FIXED mode the reference position drops out if `drop_reference`
+        is True; otherwise the axis keeps its size.
         """
 
         drops = self.mode == Reference.ADJACENT or self.drop_reference
