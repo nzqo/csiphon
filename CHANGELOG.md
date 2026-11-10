@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-10
+
+### Added
+
+- `CumulativeMeanSubtract` step: subtracts the mean of all samples so far, the
+  current one included, so nothing is ever forgotten (unlike
+  `RunningMeanSubtract`). `min_alpha` lets it forget after all: after
+  `1 / min_alpha` samples the mean turns exponential. Streaming gives the same
+  result as batch.
+
 ## [0.3.1] - 2026-09-28
 
 ### Added
