@@ -12,7 +12,11 @@ ButterworthFilter needs scipy) import it lazily, so the base install stays
 numpy-only.
 """
 
-from csiphon.steps.baseline import RunningMeanSubtract, TemporalMeanSubtract
+from csiphon.steps.baseline import (
+    CumulativeMeanSubtract,
+    RunningMeanSubtract,
+    TemporalMeanSubtract,
+)
 from csiphon.steps.calibration import AxisReference, LinearPhaseCorrection
 from csiphon.steps.cleaning import NanScrub, NoiseFloorClip
 from csiphon.steps.components import (
@@ -86,6 +90,7 @@ __all__ = [
     "ComplexStftMagnitude",
     "CovarianceSpectrum",
     "CubicSpline",
+    "CumulativeMeanSubtract",
     "DelayAutocorrelation",
     "DelayTaps",
     "DropSamples",

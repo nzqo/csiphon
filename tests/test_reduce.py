@@ -8,12 +8,7 @@ from conftest import stream_in_chunks
 
 from csiphon import Pipeline
 from csiphon.core import AxisName, StreamingError
-from csiphon.steps import (
-    Magnitude,
-    PrincipalComponents,
-    SelectAxis,
-    fit_pca_basis,
-)
+from csiphon.steps import Magnitude, PrincipalComponents, SelectAxis, fit_pca_basis
 
 
 def test_select_axis_keeps_meaning(profile, raw_signal) -> None:

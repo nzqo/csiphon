@@ -13,13 +13,7 @@ from conftest import concrete_steps
 from csiphon import Pipeline, describe
 from csiphon.core import AxisName, CompileError
 from csiphon.spec import Deferred, Description, LayoutEffect, StepSpec, Streaming
-from csiphon.steps import (
-    AxisReference,
-    DyadicFrequencyBands,
-    Magnitude,
-    Phase,
-    Power,
-)
+from csiphon.steps import AxisReference, DyadicFrequencyBands, Magnitude, Phase, Power
 
 CONCRETE_STEPS = concrete_steps()
 

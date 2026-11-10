@@ -4,15 +4,7 @@ import numpy as np
 import pytest
 from conftest import stream_in_chunks
 
-from csiphon import (
-    AcquisitionProfile,
-    AxisName,
-    Exact,
-    Fuse,
-    Hold,
-    Pipeline,
-    Stack,
-)
+from csiphon import AcquisitionProfile, AxisName, Exact, Fuse, Hold, Pipeline, Stack
 from csiphon.core.axes import Axis
 from csiphon.core.errors import ClogError, DataError, LayoutError
 from csiphon.core.layout import Layout
@@ -20,12 +12,7 @@ from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline import concat_signals
 from csiphon.pipeline.merges import Junction
-from csiphon.steps import (
-    GainNormalize,
-    Magnitude,
-    WindowedFFTPower,
-    WindowedVariance,
-)
+from csiphon.steps import GainNormalize, Magnitude, WindowedFFTPower, WindowedVariance
 from csiphon.steps.pooling import MeanOverAxes
 
 _LAYOUT = Layout(
