@@ -11,7 +11,7 @@ from csiphon.core.arrays import RealArray, SignalArray, as_real_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import DataError, LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.sampling import require_nominal_rate
+from csiphon.core.sampling import require_spectrum_rate
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -22,8 +22,9 @@ from csiphon.spec import Category, LayoutEffect, StepSpec, Streaming
 class DyadicFrequencyBands(PointwiseStep):
     """Sum frequency bins into dyadic (octave) bands
 
-    Band `k` covers `[nyquist / 2^k, nyquist / 2^(k-1))`.
-    Needs a nominal sampling rate to place the band edges.
+    Band `k` covers `[nyquist / 2^k, nyquist / 2^(k-1))`, where nyquist is half the
+    sampling rate of the signal the spectrum was computed from. The frequency axis
+    records that rate, so we read it there.
     Reduces frequency per time step, so it streams exactly.
     """
 
@@ -46,7 +47,11 @@ class DyadicFrequencyBands(PointwiseStep):
     def _edges(self, layout: Layout) -> tuple[RealArray, RealArray, RealArray]:
         """Return (lower, upper, centers) band edges from the nominal nyquist."""
 
-        rate_hz = require_nominal_rate(layout, self.name)
+        # The bands are octaves counted down from the Nyquist of the signal that the
+        # spectrum was computed from. That rate is on the frequency axis, not on the
+        # time axis, because steps like WindowedFFTPower leave the time axis at
+        # their hop rate.
+        rate_hz = require_spectrum_rate(layout, self.name)
         nyquist = rate_hz / 2.0
         levels = np.arange(self.first_band, self.first_band + self.num_bands)
         lower = as_real_array(nyquist / (2.0**levels))

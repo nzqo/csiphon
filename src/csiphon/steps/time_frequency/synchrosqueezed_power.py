@@ -129,7 +129,15 @@ class SynchrosqueezedPower(Step):
         if self.block_size is not None and self.block_size < 1:
             raise LayoutError(f"block_size must be >= 1, got {self.block_size}.")
 
-        frequency = Axis(AxisName.FREQUENCY, size=None, unit="Hz")
+        # The frequency values only exist once data has run. The axis still records
+        # the sampling rate they come from, which later steps (DyadicFrequencyBands)
+        # need to place their bands relative to the Nyquist.
+        frequency = Axis(
+            AxisName.FREQUENCY,
+            size=None,
+            unit="Hz",
+            nominal_rate_hz=layout.nominal_rate_hz,
+        )
         return (
             layout.insert_axis_after(AxisName.TIME, frequency)
             .with_representation(Representation.TIME_FREQUENCY)

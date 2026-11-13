@@ -91,9 +91,11 @@ class Axis:
     Statically sized axes provide a positive `size` and, optionally, matching
     `coordinates`.
 
-    `nominal_rate_hz` is the nominal samples per second of the time axis (None if
-    unknown). Timestamps on the signal are never exactly uniform, so this is a
-    nominal value. Only the time axis has one.
+    `nominal_rate_hz` is the nominal samples per second (None if unknown).
+    Timestamps on the signal are never exactly uniform, so this is a nominal value.
+    The time axis has one. A frequency axis has one too: the sampling rate of the
+    signal its spectrum was computed from, which sets its highest frequency (half
+    that rate). Other axes have none.
     """
 
     # fmt: off
@@ -108,9 +110,10 @@ class Axis:
         """Validate the size / coordinates relationship and the nominal rate."""
 
         if self.nominal_rate_hz is not None:
-            if self.name != AxisName.TIME:
+            if self.name not in (AxisName.TIME, AxisName.FREQUENCY):
                 raise LayoutError(
-                    f"Only the time axis has a nominal rate, not '{self.name}'."
+                    "Only the time and frequency axes have a nominal rate, "
+                    f"not '{self.name}'."
                 )
             if self.nominal_rate_hz <= 0:
                 raise LayoutError(
@@ -168,11 +171,18 @@ class Axis:
         name: AxisName,
         coordinates: Sequence[Coordinate],
         unit: str | None = None,
+        nominal_rate_hz: float | None = None,
     ) -> Axis:
         """Create a static axis from explicit coordinates."""
 
         values = tuple(coordinates)
-        return cls(name=name, size=len(values), coordinates=values, unit=unit)
+        return cls(
+            name=name,
+            size=len(values),
+            coordinates=values,
+            unit=unit,
+            nominal_rate_hz=nominal_rate_hz,
+        )
 
     @classmethod
     def sized(cls, name: AxisName, size: int, unit: str | None = None) -> Axis:

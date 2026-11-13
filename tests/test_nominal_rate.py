@@ -21,16 +21,18 @@ from csiphon import (
 from csiphon.core.errors import CompileError, LayoutError
 from csiphon.core.sampling import RateMismatchWarning, divide_nominal_rate
 from csiphon.steps import (
-    Hold as HoldFill,
-)
-from csiphon.steps import (
+    DyadicFrequencyBands,
     Magnitude,
     MeanOverAxes,
+    RealPart,
     Resample,
     SubsampleEvery,
     WindowedFFTPower,
     WindowedVariance,
     WindowSum,
+)
+from csiphon.steps import (
+    Hold as HoldFill,
 )
 
 
@@ -47,10 +49,10 @@ def _ones(n_samples: int, rate_hz: float = 1000.0) -> Signal:
     return _profile(rate_hz).raw_signal(csi, np.arange(n_samples) / rate_hz)
 
 
-def test_only_the_time_axis_has_a_nominal_rate() -> None:
+def test_only_the_time_and_frequency_axes_have_a_nominal_rate() -> None:
     """A nominal rate on any other axis is rejected."""
 
-    with pytest.raises(LayoutError, match="time axis"):
+    with pytest.raises(LayoutError, match="time and frequency"):
         Axis(AxisName.SUBCARRIER, 4, nominal_rate_hz=10.0)
 
 
@@ -226,3 +228,40 @@ def test_a_short_recording_is_not_checked_for_the_rate() -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         compiled.pour(_timestamps_at(125.0, count=10))
+
+
+@pytest.mark.parametrize("streamed", [False, True], ids=["batch", "stream"])
+def test_dyadic_bands_follow_the_rate_after_subsampling(streamed: bool) -> None:
+    """After SubsampleEvery(8) a 1 kHz capture runs at 125 Hz, so the octave bands
+    have their centers from 47 Hz down to 1.5 Hz (not 375 Hz down to 12 Hz), and a
+    40 Hz tone falls into the first band. Guards against bands that are still placed
+    for the rate of the original capture."""
+
+    times = np.arange(8000) / 1000.0
+    tone = np.sin(2.0 * np.pi * 40.0 * times)
+    csi = np.repeat(tone[:, None, None], 2, axis=2).astype(complex)
+    signal = _profile(1000.0).raw_signal(csi, times)
+    compiled = (
+        Pipeline()
+        .then(RealPart())
+        .then(SubsampleEvery(8))
+        .then(WindowedFFTPower(window_s=0.512, hop_s=0.1, band_hz=60.0))
+        .then(DyadicFrequencyBands(num_bands=6))
+        .compile(_profile(1000.0))
+    )
+
+    output = (
+        stream_in_chunks(compiled, signal, 500)
+        if streamed
+        else compiled.pour(signal).single()
+    )
+
+    centers = compiled.outlet_layout.axis(AxisName.BAND).coordinates
+    assert centers is not None
+    assert centers[0] == pytest.approx(46.875)
+    assert centers[-1] == pytest.approx(1.465, abs=0.001)
+
+    # Power per band, summed over everything else: the 40 Hz tone is in band 0.
+    band_position = compiled.outlet_layout.axis_position(AxisName.BAND)
+    power = np.moveaxis(output.values, band_position, 0).reshape(6, -1).sum(axis=1)
+    assert power.argmax() == 0

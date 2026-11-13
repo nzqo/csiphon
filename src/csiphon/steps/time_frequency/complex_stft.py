@@ -201,9 +201,15 @@ class ComplexStftMagnitude(Step):  # pylint: disable=too-many-instance-attribute
         for name in self.mean_over:
             layout.require_static_axis(name)
 
-        # The frequency axis carries the Hz value of every kept bin.
+        # The frequency axis carries the Hz value of every kept bin. It also records
+        # the sampling rate this spectrum comes from. After this step the time axis
+        # runs at the hop rate, so only the frequency axis still tells later steps
+        # (DyadicFrequencyBands) the Nyquist.
         frequency = Axis.static(
-            AxisName.FREQUENCY, tuple(self._bin_frequencies(layout)), unit="Hz"
+            AxisName.FREQUENCY,
+            tuple(self._bin_frequencies(layout)),
+            unit="Hz",
+            nominal_rate_hz=layout.nominal_rate_hz,
         )
 
         # Drop the averaged axes, put the frequency axis right after time, and

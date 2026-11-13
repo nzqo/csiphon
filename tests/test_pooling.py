@@ -186,7 +186,10 @@ def test_dyadic_frequency_bands_sum_bins_per_octave() -> None:
         (
             Axis.dynamic(AxisName.TIME),
             Axis.static(
-                AxisName.FREQUENCY, tuple(float(i) for i in range(8)), unit="Hz"
+                AxisName.FREQUENCY,
+                tuple(float(i) for i in range(8)),
+                unit="Hz",
+                nominal_rate_hz=16.0,
             ),
         ),
         Representation.TIME_FREQUENCY,
@@ -218,7 +221,10 @@ def test_dyadic_band_centres_are_octave_midpoints() -> None:
         (
             Axis.dynamic(AxisName.TIME),
             Axis.static(
-                AxisName.FREQUENCY, tuple(float(i) for i in range(8)), unit="Hz"
+                AxisName.FREQUENCY,
+                tuple(float(i) for i in range(8)),
+                unit="Hz",
+                nominal_rate_hz=16.0,
             ),
         ),
         Representation.TIME_FREQUENCY,
@@ -255,6 +261,7 @@ def test_dyadic_bands_are_zero_when_all_frequencies_fall_below_them() -> None:
                 AxisName.FREQUENCY,
                 tuple(np.linspace(0.0, 0.9, 8).tolist()),  # all below 1 Hz
                 unit="Hz",
+                nominal_rate_hz=16.0,
             ),
         ),
         Representation.TIME_FREQUENCY,

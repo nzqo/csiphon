@@ -84,7 +84,15 @@ class WindowedFFTPower(Step):
         rate_hz = require_nominal_rate(layout, self.name)
         window = WindowInSamples.from_seconds(rate_hz, self.window_s, self.hop_s)
         kept_frequencies, _ = rfft_band(window.window_size, rate_hz, self.band_hz)
-        frequency = Axis.static(AxisName.FREQUENCY, tuple(kept_frequencies), unit="Hz")
+        # The frequency axis also records the sampling rate this spectrum comes
+        # from. After this step the time axis runs at the hop rate, so only the
+        # frequency axis still tells later steps (DyadicFrequencyBands) the Nyquist.
+        frequency = Axis.static(
+            AxisName.FREQUENCY,
+            tuple(kept_frequencies),
+            unit="Hz",
+            nominal_rate_hz=rate_hz,
+        )
 
         # One output sample per hop, so the output rate is the input rate over it.
         return (

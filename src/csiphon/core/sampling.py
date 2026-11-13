@@ -14,6 +14,7 @@ from enum import StrEnum
 import numpy as np
 
 from csiphon.core.arrays import RealArray
+from csiphon.core.axes import AxisName
 from csiphon.core.errors import DataError, LayoutError
 from csiphon.core.layout import Layout
 
@@ -75,6 +76,23 @@ def require_nominal_rate(layout: Layout, step: str) -> float:
             f"Step '{step}' needs a nominal sampling rate. Set "
             "AcquisitionProfile.sampling_rate_hz (actual timestamp jitter is "
             "still tolerated at run time)."
+        )
+    return rate_hz
+
+
+def require_spectrum_rate(layout: Layout, step: str) -> float:
+    """Return the sampling rate that the frequency axis was computed from.
+
+    The highest frequency of a spectrum is half of it. Spectrum steps record it on
+    the frequency axis, because the time axis after them runs at the hop rate.
+    """
+
+    rate_hz = layout.axis(AxisName.FREQUENCY).nominal_rate_hz
+    if rate_hz is None:
+        raise LayoutError(
+            f"Step '{step}' needs to know the sampling rate that the frequency "
+            "axis was computed from, and it is unknown. Set "
+            "AcquisitionProfile.sampling_rate_hz."
         )
     return rate_hz
 

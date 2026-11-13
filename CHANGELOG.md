@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `SparseFitSanitize`: SHARP's phase cleaning (Meneghello et al., 2023). It fits a
+  few paths to each packet, gives every path relative to the strongest one, which
+  cancels the per-packet phase offsets, and then removes the linear phase trend
+  across the subcarriers. Put a `GainNormalize` before it and after it, as SHARP
+  does. Needs the `subcarrier_spacing_hz` of the capture (312.5 kHz for 802.11n/ac,
+  the default).
 - `window_mode` on `WindowSum` and `WindowedVariance`
   (`WindowDeterminationMode`).
   `FROM_NOMINAL_RATE` is the old behavior and stays the default. With
@@ -40,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Resample`, `WindowSum`, `WindowedFFTPower`, `Multitaper`,
   `ComplexStftMagnitude`, `CovarianceSpectrum` and `LocalPcaBias`. A merge takes
   the rate of its reference branch.
+- A frequency axis records the sampling rate its spectrum was computed from
+  (`WindowedFFTPower`, `Multitaper`, `ComplexStftMagnitude` and
+  `SynchrosqueezedPower` set it). `DyadicFrequencyBands` places its bands from it,
+  so its bands are right after `SubsampleEvery` and after windows that hop.
 - The profile only specifies the input. Steps no longer receive it:
   `output_layout`, `process`, `stream` and `transform_values` lost their
   `profile` argument, so custom steps need that argument removed. Steps read the

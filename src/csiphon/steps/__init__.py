@@ -18,7 +18,11 @@ from csiphon.steps.baseline import (
     RunningMeanSubtract,
     TemporalMeanSubtract,
 )
-from csiphon.steps.calibration import AxisReference, LinearPhaseCorrection
+from csiphon.steps.calibration import (
+    AxisReference,
+    LinearPhaseCorrection,
+    SparseFitSanitize,
+)
 from csiphon.steps.cleaning import NanScrub, NoiseFloorClip
 from csiphon.steps.components import (
     ImagPart,
@@ -130,6 +134,7 @@ __all__ = [
     "RunningMeanSubtract",
     "SavitzkyGolay",
     "SelectAxis",
+    "SparseFitSanitize",
     "StackAmpPhase",
     "SubsampleEvery",
     "SynchrosqueezedPower",

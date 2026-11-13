@@ -76,7 +76,12 @@ def _payload_axis(name: AxisName) -> Axis:
         return Axis.static(AxisName.DELAY, tuple(float(i) for i in range(16)))
     if name == AxisName.FREQUENCY:
         coords = tuple(np.linspace(-NYQUIST, NYQUIST, 32, endpoint=False).tolist())
-        return Axis.static(AxisName.FREQUENCY, coords, unit="Hz")
+        return Axis.static(
+            AxisName.FREQUENCY,
+            coords,
+            unit="Hz",
+            nominal_rate_hz=PROFILE.sampling_rate_hz,
+        )
     if name == AxisName.FEATURE:
         return Axis.sized(AxisName.FEATURE, 6)
     return Axis.sized(name, 4)
