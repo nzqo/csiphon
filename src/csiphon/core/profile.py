@@ -1,9 +1,13 @@
-"""Stable radio properties of a capture setup.
+"""Input specification of a capture setup.
 
-An AcquisitionProfile describes the *hardware / capture* configuration
-that is constant across every recording from the same setup. A pipeline is
-compiled against a profile, so one compiled pipeline serves all recordings from
-that setup (batch or streaming).
+An AcquisitionProfile says what the raw CSI of a setup looks like: how many
+receivers and antennas, which subcarriers, and the nominal sampling rate. A
+pipeline is compiled against it, which turns it into the layout of the inlet, so
+one compiled pipeline serves all recordings from that setup (batch or streaming).
+
+After the inlet the profile is not used. Steps read the axes, the subcarrier
+indices and the nominal rate from the layouts. A step that drops an antenna or
+changes the sampling rate changes the layout, not the profile.
 
 Sampling rate is deliberately **optional**: WiFi CSI timestamps are never
 perfectly uniform, and the timestamps carried on each Signal are the
@@ -73,17 +77,6 @@ class AcquisitionProfile:
         """Return the number of subcarriers in the capture."""
 
         return len(self.subcarrier_indices)
-
-    def require_sampling_rate(self, step: str) -> float:
-        """Return the nominal rate or fail explaining why a step needs it."""
-
-        if self.sampling_rate_hz is None:
-            raise LayoutError(
-                f"Step '{step}' needs a nominal sampling rate to lay out its "
-                "frequency axis. Set AcquisitionProfile.sampling_rate_hz "
-                "(actual timestamp jitter is still tolerated at run time)."
-            )
-        return self.sampling_rate_hz
 
     def raw_csi_layout(self) -> Layout:
         """Return the raw-CSI input layout for this setup.

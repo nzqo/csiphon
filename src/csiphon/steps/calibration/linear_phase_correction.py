@@ -12,7 +12,6 @@ from csiphon.core.arrays import RealArray, SignalArray, as_signal_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -84,7 +83,7 @@ class LinearPhaseCorrection(PointwiseStep):
 
         return (self.axis,)
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Shape and semantics are unchanged; only the phase ramp is removed."""
 
         self.require_inputs(layout)
@@ -104,11 +103,7 @@ class LinearPhaseCorrection(PointwiseStep):
         return layout
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Fit and remove the ramp along the axis, one fit per time frame."""
 

@@ -10,7 +10,6 @@ import numpy as np
 from csiphon.core.arrays import SignalArray, as_signal_array
 from csiphon.core.axes import AxisName
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -54,7 +53,7 @@ class GainNormalize(PointwiseStep):
 
         return (self.axis,)
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Require a static normalization axis; semantics are unchanged."""
 
         self.require_inputs(layout)
@@ -62,11 +61,7 @@ class GainNormalize(PointwiseStep):
         return layout
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Divide by the mean magnitude over `axis`, keeping dimensions and dtype."""
 

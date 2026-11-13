@@ -19,7 +19,6 @@ from csiphon.core.arrays import RealArray, SignalArray, as_signal_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError, MissingDependencyError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import effective_rate_hz
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal, empty_signal
@@ -104,7 +103,7 @@ class ButterworthFilter(Step):
         streaming_note="causal lfilter; batch is zero-phase filtfilt",
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Filtering keeps the structure and semantics unchanged."""
 
         self.require_inputs(layout)
@@ -132,9 +131,7 @@ class ButterworthFilter(Step):
                 raise LayoutError(f"cutoff_hz must be > 0, got {self.cutoff_hz}.")
         return layout
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Zero-phase filtfilt over the whole recording."""
 
         time_index = signal.layout.dynamic_index
@@ -151,9 +148,7 @@ class ButterworthFilter(Step):
         )
         return signal.with_values(filtered, out_layout)
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Return a causal lfilter operator (needs a nominal rate)."""
 
         rate_hz = in_layout.nominal_rate_hz

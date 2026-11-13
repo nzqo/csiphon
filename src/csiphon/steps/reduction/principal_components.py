@@ -18,7 +18,6 @@ from csiphon.core.arrays import SignalArray
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.signal import Signal, empty_signal
 from csiphon.pipeline.step import Step, StreamOperator
 from csiphon.spec import (
@@ -110,7 +109,7 @@ class PrincipalComponents(Step):
             note="integer component coordinates",
         )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Replace the source axis with a component axis of integer coordinates."""
 
         self.require_inputs(layout)
@@ -126,9 +125,7 @@ class PrincipalComponents(Step):
         )
         return layout.replace_axis(self.axis, component)
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Project onto the components (fitting the basis first if needed)."""
 
         basis = self.basis
@@ -138,9 +135,7 @@ class PrincipalComponents(Step):
         projected = _project(signal.values, position, basis)
         return signal.with_values(projected, out_layout, coords=signal.coords)
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Stream only with a pre-fit basis; fit-on-data PCA is batch-only."""
 
         if self.basis is None:

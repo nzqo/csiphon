@@ -14,7 +14,6 @@ from csiphon.core.arrays import SignalArray, as_signal_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
 from csiphon.spec import (
@@ -65,7 +64,7 @@ class MeanOverAxes(PointwiseStep):
 
         return LayoutEffect(removes=self.axes, note="averaged away")
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Drop the averaged axes; keep everything else."""
 
         self.require_inputs(layout)
@@ -80,11 +79,7 @@ class MeanOverAxes(PointwiseStep):
         return layout.remove_axes(self.axes)
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Average the array over the chosen axes at once."""
 

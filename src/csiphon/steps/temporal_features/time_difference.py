@@ -11,7 +11,6 @@ import numpy as np
 from csiphon.core.arrays import SignalArray, as_signal_array
 from csiphon.core.axes import AxisName
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal, empty_signal
 from csiphon.pipeline.step import Step, StreamOperator
@@ -91,22 +90,18 @@ class TimeDifference(Step):
             return (ValueKind.COMPLEX,)
         return None
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Same axes and semantics; the accepted value kinds depend on the mode."""
 
         self.require_inputs(layout)
         return layout
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Difference the whole recording (the operator handles it in one push)."""
 
         return _TimeDifferenceOperator(self.mode, out_layout).push(signal)
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Carry the last sample across chunks so differences span the boundaries."""
 
         return _TimeDifferenceOperator(self.mode, out_layout)

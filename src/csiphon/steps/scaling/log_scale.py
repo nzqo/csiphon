@@ -9,7 +9,6 @@ import numpy as np
 
 from csiphon.core.arrays import SignalArray, as_real_array
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -40,18 +39,14 @@ class LogScale(PointwiseStep):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Scaling keeps the representation but yields a plain real value."""
 
         self.require_inputs(layout)
         return layout.with_values(ValueKind.REAL)
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Return `log(values + epsilon)`."""
 

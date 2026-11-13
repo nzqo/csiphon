@@ -52,18 +52,14 @@ class ClipAbove(PointwiseStep):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Guards first (enforce the contract), then keep the same layout."""
 
         self.require_inputs(layout)
         return layout
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Clamp every value to at most `threshold`."""
 

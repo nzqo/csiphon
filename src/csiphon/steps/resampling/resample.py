@@ -34,7 +34,6 @@ from csiphon.core.arrays import (
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError, MissingDependencyError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal, empty_signal
 from csiphon.pipeline._align_ops import concat_time, hold_values_at
@@ -216,7 +215,7 @@ class Resample(Step):
 
         return self.fill.streaming
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Time stays the (dynamic) axis, now on the grid rate."""
 
         self.require_inputs(layout)
@@ -238,9 +237,7 @@ class Resample(Step):
         # The output lies on the grid, so its nominal rate is the grid rate.
         return layout.with_nominal_rate(1.0 / self._step_seconds())
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Build the grid over the recording and fill each point from the source."""
 
         if signal.layout.dynamic_index is None or signal.n_samples == 0:
@@ -250,9 +247,7 @@ class Resample(Step):
         values = self.fill.values_on_grid(signal, times, grid)
         return signal.with_values(values, out_layout, times=grid)
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """A causal grid operator for streaming fills; None for batch-only ones."""
 
         if self.fill.streaming is Streaming.UNAVAILABLE:

@@ -20,7 +20,6 @@ from csiphon.core.arrays import RealArray, SignalArray, as_real_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError, MissingDependencyError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import effective_rate_hz
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal, empty_signal
@@ -117,7 +116,7 @@ class SynchrosqueezedPower(Step):
             return Streaming.UNAVAILABLE
         return Streaming.BATCH_EQUIVALENT
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Insert a runtime-sized frequency axis; produce time-frequency power."""
 
         self.require_inputs(layout)
@@ -137,9 +136,7 @@ class SynchrosqueezedPower(Step):
             .with_values(ValueKind.POWER)
         )
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Whole-recording power, or block-local power when `block_size` is set."""
 
         values = as_real_array(signal.values)
@@ -204,9 +201,7 @@ class SynchrosqueezedPower(Step):
         )
         return signal, covered
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Return a block-local operator, or `None` if no block size is set."""
 
         if self.block_size is None:

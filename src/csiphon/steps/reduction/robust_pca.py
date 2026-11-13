@@ -12,7 +12,6 @@ from csiphon.core.arrays import RealArray, as_real_array, as_signal_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import Step
@@ -144,7 +143,7 @@ class RobustPca(Step):  # pylint: disable=too-many-instance-attributes  # RPCA h
             replaces=((self.axis, AxisName.COMPONENT),), value_kind=ValueKind.REAL
         )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Replace the chosen axis with `num_components` abstract components."""
 
         self.require_inputs(layout)
@@ -171,9 +170,7 @@ class RobustPca(Step):  # pylint: disable=too-many-instance-attributes  # RPCA h
         )
         return layout.replace_axis(self.axis, component).with_values(ValueKind.REAL)
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Fit the decomposition, learn a basis, and project the whole recording."""
 
         time_index = signal.layout.dynamic_index

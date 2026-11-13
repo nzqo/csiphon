@@ -14,7 +14,6 @@ from csiphon.core.arrays import RealArray, SignalArray, as_real_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import divide_nominal_rate
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal
@@ -123,7 +122,7 @@ class LocalPcaBias(Step):
             note="pca-bias stats per window",
         )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Replace the chosen axis with a 3-vector of statistics, per window."""
 
         self.require_inputs(layout)
@@ -154,16 +153,12 @@ class LocalPcaBias(Step):
             geometry, _bias_frame(feature_pos), in_layout, out_layout
         )
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Compute the stats for every window in the whole recording."""
 
         return self._operator(signal.layout, out_layout).push(signal)
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Emit one statistics row per completed window, carrying the buffer."""
 
         return self._operator(in_layout, out_layout)

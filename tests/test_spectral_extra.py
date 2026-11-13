@@ -37,7 +37,7 @@ def test_cir_recovers_a_known_impulse_response(  # pylint: disable=too-many-loca
     """
 
     num_taps = 4
-    nfft = resolve_nfft(profile.n_subcarriers)
+    nfft = resolve_nfft(np.asarray(profile.subcarrier_indices, dtype=float))
     subcarriers = np.asarray(profile.subcarrier_indices, dtype=float)
     taps = np.arange(num_taps, dtype=float)
     forward = np.exp(-1j * 2.0 * np.pi * np.outer(subcarriers, taps) / nfft) / np.sqrt(
@@ -69,7 +69,7 @@ def test_default_cir_is_the_full_length_min_norm_inverse(
     the plain inverse DFT of the observed tones.
     """
 
-    nfft = resolve_nfft(profile.n_subcarriers)
+    nfft = resolve_nfft(np.asarray(profile.subcarrier_indices, dtype=float))
     subcarriers = np.asarray(profile.subcarrier_indices, dtype=float)
 
     rng = np.random.default_rng(1)

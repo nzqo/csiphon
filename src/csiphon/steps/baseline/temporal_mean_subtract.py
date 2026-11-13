@@ -7,7 +7,6 @@ from typing import ClassVar
 
 from csiphon.core.arrays import as_real_array
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import Step
@@ -37,15 +36,13 @@ class TemporalMeanSubtract(Step):
         streaming_note="needs every sample; use RunningMeanSubtract to stream",
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Structure and semantics are unchanged."""
 
         self.require_inputs(layout)
         return layout
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Subtract the mean over the time axis."""
 
         time_index = signal.layout.dynamic_index

@@ -69,7 +69,7 @@ def _payload_axis(name: AxisName) -> Axis:
     """A static axis of `name` with coordinates a step can actually use."""
 
     if name == AxisName.SUBCARRIER:
-        return Axis.sized(AxisName.SUBCARRIER, 8)
+        return Axis.static(AxisName.SUBCARRIER, tuple(range(8)), unit="index")
     if name == AxisName.RX_ANTENNA:
         return Axis.sized(AxisName.RX_ANTENNA, 3)
     if name == AxisName.DELAY:
@@ -570,7 +570,7 @@ def test_select_axis_resize_effect_tracks_its_indices() -> None:
     for indices in [(0, 1), (0, 1, 2, 3)]:
         step = SelectAxis(axis=AxisName.SUBCARRIER, indices=indices)
         assert step.resolve_layout_effect().resizes == (AxisName.SUBCARRIER,)
-        out = step.output_layout(layout, PROFILE)
+        out = step.output_layout(layout)
         assert out.axis(AxisName.SUBCARRIER).size == len(indices)
 
 
@@ -595,6 +595,6 @@ def test_axis_reference_resize_effect_tracks_its_mode() -> None:
     assert not plain.resolve_layout_effect().resizes  # keeps the axis
     assert dropping.resolve_layout_effect().resizes == (AxisName.RX_ANTENNA,)
     assert adjacent.resolve_layout_effect().resizes == (AxisName.RX_ANTENNA,)
-    assert plain.output_layout(layout, PROFILE).axis(AxisName.RX_ANTENNA).size == 3
-    assert dropping.output_layout(layout, PROFILE).axis(AxisName.RX_ANTENNA).size == 2
-    assert adjacent.output_layout(layout, PROFILE).axis(AxisName.RX_ANTENNA).size == 2
+    assert plain.output_layout(layout).axis(AxisName.RX_ANTENNA).size == 3
+    assert dropping.output_layout(layout).axis(AxisName.RX_ANTENNA).size == 2
+    assert adjacent.output_layout(layout).axis(AxisName.RX_ANTENNA).size == 2

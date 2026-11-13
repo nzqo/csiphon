@@ -15,7 +15,6 @@ from csiphon.core.arrays import RealArray, SignalArray, as_real_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError, MissingDependencyError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import (
     check_jitter,
     divide_nominal_rate,
@@ -156,7 +155,7 @@ class Multitaper(Step):
             note="time-frequency",
         )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Replace the chosen axis with an in-band frequency axis of power."""
 
         self.require_inputs(layout)
@@ -205,17 +204,13 @@ class Multitaper(Step):
             out_layout,
         )
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Compute the multitaper spectrogram over the whole recording."""
 
         check_jitter(signal.times, step=self.name, strict=self.strict)
         return self._operator(signal.layout, out_layout).push(signal)
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Emit one spectrum per completed window, carrying the buffer."""
 
         return self._operator(in_layout, out_layout)

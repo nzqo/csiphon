@@ -204,7 +204,7 @@ def _run_node(node: Node, inputs: list[Signal]) -> Signal:
 
     if isinstance(node.op, Junction):
         return node.op.process(inputs, node.out_layout)
-    return node.op.process(inputs[0], node.out_layout, node.out_profile)
+    return node.op.process(inputs[0], node.out_layout)
 
 
 def concat_signals(signals: list[Signal], layout: Layout) -> Signal:
@@ -301,7 +301,7 @@ def _build_operator(node: Node, siphon: Siphon) -> StreamOperator | Trap | Seque
     if isinstance(node.op, Junction):
         return node.op.trap(node.out_layout)
     in_layout = siphon.layouts[node.inputs[0]]
-    operator = node.op.stream(in_layout, node.out_layout, node.out_profile)
+    operator = node.op.stream(in_layout, node.out_layout)
     if operator is None:
         raise StreamingError(
             f"Step '{node.op.name}' cannot run in streaming mode (it needs the whole "

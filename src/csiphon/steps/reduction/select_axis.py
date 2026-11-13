@@ -14,7 +14,6 @@ from csiphon.core.arrays import SignalArray, as_signal_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
 from csiphon.spec import CONFIG_DEPENDENT, Category, LayoutEffect, StepSpec, Streaming
@@ -58,7 +57,7 @@ class SelectAxis(PointwiseStep):
 
         return LayoutEffect(resizes=(self.axis,), note="keeps the selected positions")
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Shrink the selected axis to the kept coordinates."""
 
         self.require_inputs(layout)
@@ -81,11 +80,7 @@ class SelectAxis(PointwiseStep):
         return layout.replace_axis(self.axis, reduced)
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Take the kept indices along the selected axis."""
 

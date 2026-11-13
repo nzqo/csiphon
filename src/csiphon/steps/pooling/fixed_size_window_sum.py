@@ -11,7 +11,6 @@ from csiphon.core.arrays import as_real_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError, StreamingError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import check_jitter, divide_nominal_rate, effective_rate_hz
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
@@ -49,7 +48,7 @@ class FixedSizeWindowSum(Step):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Time stays the (dynamic) axis; every other axis is unchanged."""
 
         self.require_inputs(layout)
@@ -66,9 +65,7 @@ class FixedSizeWindowSum(Step):
         ).hop_stride
         return divide_nominal_rate(layout, hop_stride)
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Vectorized sliding-window sum via a cumulative sum."""
 
         time_index = signal.layout.dynamic_index
@@ -95,9 +92,7 @@ class FixedSizeWindowSum(Step):
             restored, out_layout, times=signal.times[centers], coords=signal.coords
         )
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Ring-buffer operator that emits one window sum at a time."""
 
         rate_hz = in_layout.nominal_rate_hz

@@ -11,7 +11,6 @@ from csiphon.core.arrays import SignalArray, as_signal_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import Representation
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -76,7 +75,7 @@ class FoldAxes(PointwiseStep):
             removes=self.axes, adds=(self.into,), note="product of sizes"
         )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Replace the named axes with one folded axis of their product size."""
 
         self.require_inputs(layout)
@@ -113,11 +112,7 @@ class FoldAxes(PointwiseStep):
         return new_layout
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Gather the folded axes side by side (in order), then reshape to one."""
 

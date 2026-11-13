@@ -12,7 +12,6 @@ from csiphon.core.arrays import RealArray, as_real_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError, StreamingError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import effective_rate_hz
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal, empty_signal
@@ -57,7 +56,7 @@ class WindowedSlope(Step):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Shape and semantics are unchanged; each value becomes a local slope."""
 
         self.require_inputs(layout)
@@ -65,9 +64,7 @@ class WindowedSlope(Step):
             raise LayoutError("WindowedSlope needs window_size >= 2.")
         return layout
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Run the rolling slope over the whole recording."""
 
         inv_dt = 1.0
@@ -75,9 +72,7 @@ class WindowedSlope(Step):
             inv_dt = effective_rate_hz(signal.times, signal.layout.nominal_rate_hz)
         return _WindowedSlopeOperator(self.window_size, inv_dt, out_layout).push(signal)
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Carry the window across chunks; a per-second slope needs a known rate."""
 
         inv_dt = 1.0

@@ -19,7 +19,6 @@ from csiphon.core.arrays import as_real_array, as_signal_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import Step
 from csiphon.spec import Category, LayoutEffect, StepSpec, Streaming
@@ -132,7 +131,7 @@ class DropSamples(Step):
         streaming_note="offline augmentation; the last-sample keep needs the full run",
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Time stays the (dynamic) axis; structure and semantics are unchanged."""
 
         self.require_inputs(layout)
@@ -140,9 +139,7 @@ class DropSamples(Step):
             raise LayoutError(f"loss_rate must be in [0, 1), got {self.loss_rate}.")
         return layout
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Drop the chosen samples, keeping the survivors' real timestamps."""
 
         time_index = signal.layout.dynamic_index

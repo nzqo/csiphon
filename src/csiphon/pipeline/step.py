@@ -21,7 +21,6 @@ from typing import ClassVar
 from csiphon.core.arrays import SignalArray
 from csiphon.core.axes import AxisName
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal, empty_signal
 from csiphon.spec import Deferred, LayoutEffect, StepSpec, Streaming
@@ -129,23 +128,15 @@ class Step(ABC):
             layout.require_axis(axis)
 
     @abstractmethod
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Validate the input layout and return the output layout."""
 
     @abstractmethod
-    def process(
-        self,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Run the full batch algorithm on a complete signal."""
 
     def stream(  # pylint: disable=unused-argument  # overridable hook; subclasses use these
-        self,
-        in_layout: Layout,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, in_layout: Layout, out_layout: Layout
     ) -> StreamOperator | None:
         """Return a streaming operator, or `None` if batch-only (default)."""
 
@@ -163,54 +154,37 @@ class PointwiseStep(Step):
 
     @abstractmethod
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Transform a block of values without mixing across the time axis."""
 
-    def process(
-        self,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Apply the pointwise transform to the whole signal."""
 
-        new_values = self.transform_values(signal.values, signal, out_layout, profile)
+        new_values = self.transform_values(signal.values, signal, out_layout)
         return signal.with_values(new_values, out_layout)
 
-    def stream(
-        self,
-        in_layout: Layout,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Return an exact per-chunk operator (never buffers)."""
 
-        return _PointwiseOperator(self, out_layout, profile)
+        return _PointwiseOperator(self, out_layout)
 
 
 class _PointwiseOperator(StreamOperator):
     """Applies a PointwiseStep to each chunk with no state."""
 
-    def __init__(
-        self, step: PointwiseStep, out_layout: Layout, profile: AcquisitionProfile
-    ) -> None:
+    def __init__(self, step: PointwiseStep, out_layout: Layout) -> None:
         """Bind the step and the compiled output layout."""
 
         self._step = step
         self._out_layout = out_layout
-        self._profile = profile
 
     def push(self, chunk: Signal) -> Signal:
         """Transform the chunk directly."""
 
         if chunk.n_samples == 0:
             return empty_signal(self._out_layout)
-        return self._step.process(chunk, self._out_layout, self._profile)
+        return self._step.process(chunk, self._out_layout)
 
     def flush(self) -> Signal:
         """Nothing is buffered, so emit an empty signal."""

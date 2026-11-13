@@ -9,7 +9,6 @@ from csiphon.core.arrays import SignalArray, as_real_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import divide_nominal_rate
 from csiphon.core.signal import Signal, empty_signal
 from csiphon.pipeline.step import Step, StreamOperator
@@ -50,7 +49,7 @@ class SubsampleEvery(Step):
         streaming_note="causal subset selection; streams exactly",
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Time stays the (dynamic) axis, at a lower nominal rate."""
 
         self.require_inputs(layout)
@@ -60,9 +59,7 @@ class SubsampleEvery(Step):
         # Every Nth sample is kept, so the rate drops by that factor.
         return divide_nominal_rate(layout, self.every)
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Keep every Nth sample, along with its real timestamp."""
 
         time_index = signal.layout.dynamic_index
@@ -74,9 +71,7 @@ class SubsampleEvery(Step):
         times = as_real_array(signal.times[:: self.every])
         return signal.with_values(values, out_layout, times=times)
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator:
         """A causal operator keeping the global every-Nth sample, chunks included."""
 
         return _EveryNOperator(self.every, out_layout)

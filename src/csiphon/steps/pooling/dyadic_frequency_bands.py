@@ -11,7 +11,6 @@ from csiphon.core.arrays import RealArray, SignalArray, as_real_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import DataError, LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import require_nominal_rate
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
@@ -54,7 +53,7 @@ class DyadicFrequencyBands(PointwiseStep):
         upper = as_real_array(nyquist / (2.0 ** (levels - 1)))
         return lower, upper, as_real_array(0.5 * (lower + upper))
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Replace the frequency axis with a band axis."""
 
         self.require_inputs(layout)
@@ -67,11 +66,7 @@ class DyadicFrequencyBands(PointwiseStep):
         return layout.replace_axis(AxisName.FREQUENCY, band)
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Sum bins into bands using the runtime frequencies."""
 

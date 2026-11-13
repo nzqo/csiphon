@@ -16,7 +16,6 @@ from csiphon.core.arrays import RealArray, SignalArray, as_real_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import (
     check_jitter,
     divide_nominal_rate,
@@ -69,7 +68,7 @@ class WindowedFFTPower(Step):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Insert a frequency axis after time; produce time-frequency power."""
 
         self.require_inputs(layout)
@@ -95,9 +94,7 @@ class WindowedFFTPower(Step):
             .with_values(ValueKind.POWER)
         )
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Gather sliding windows and take Hann-windowed FFT power."""
 
         check_jitter(signal.times, step=self.name, strict=self.strict)
@@ -128,9 +125,7 @@ class WindowedFFTPower(Step):
             coords={AxisName.FREQUENCY: kept_frequencies},
         )
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Ring-buffer operator that emits one spectrum per completed window."""
 
         rate_hz = require_nominal_rate(in_layout, self.name)

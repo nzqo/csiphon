@@ -4,13 +4,14 @@ import numpy as np
 import pytest
 from conftest import stream_in_chunks
 
-from csiphon import AcquisitionProfile, AxisName, Pipeline, Signal
-from csiphon.core.errors import LayoutError
+from csiphon import AcquisitionProfile, Axis, AxisName, Pipeline, Signal
+from csiphon.core.errors import CompileError, LayoutError
 from csiphon.steps import (
     ChannelImpulseResponse,
     DelayAutocorrelation,
     Magnitude,
     SelectAxis,
+    resolve_nfft,
 )
 
 # A 40 MHz layout: 114 used subcarriers on a 128-point FFT grid, with a DC gap.
@@ -81,9 +82,9 @@ def test_reduced_subcarrier_axis_matches_narrowed_profile(first, last) -> None:
 
 
 @pytest.mark.parametrize("step_cls", [DelayAutocorrelation, ChannelImpulseResponse])
-def test_nfft_is_inferred_from_the_profile_not_the_kept_count(step_cls) -> None:
-    """The indices live on the original channel's FFT grid (128 for 114 used
-    subcarriers), so keeping 57 of them must not change the inferred nfft to 64."""
+def test_nfft_is_inferred_from_the_span_of_the_kept_indices(step_cls) -> None:
+    """Every second subcarrier of a 40 MHz capture still spans -58 to 56, so the
+    inferred nfft is 128, the same as when nfft is given."""
 
     csi = _csi()
     profile, signal = _full_signal(csi)
@@ -97,6 +98,32 @@ def test_nfft_is_inferred_from_the_profile_not_the_kept_count(step_cls) -> None:
     ).single()
 
     np.testing.assert_allclose(inferred.values, explicit.values, atol=1e-10)
+
+
+@pytest.mark.parametrize(
+    ("indices", "expected"),
+    [
+        (tuple(range(-58, -1)) + tuple(range(2, 59)), 128),  # 40 MHz, full
+        (tuple(range(-26, 0)) + tuple(range(1, 27)), 64),  # 20 MHz, full
+        (tuple(range(-58, -1)), 64),  # a contiguous block of 57 fits 64 bins
+        (tuple(range(-122, -1)) + tuple(range(2, 123)), 256),  # 80 MHz, full
+    ],
+    ids=["40MHz", "20MHz", "contiguous-block", "80MHz"],
+)
+def test_resolve_nfft_picks_the_smallest_size_above_the_index_span(
+    indices: tuple[int, ...], expected: int
+) -> None:
+    """Indices that differ by a multiple of nfft would share a bin, so nfft must
+    exceed the span of the indices."""
+
+    assert resolve_nfft(np.asarray(indices, dtype=float)) == expected
+
+
+def test_resolve_nfft_asks_for_nfft_when_the_span_is_too_large() -> None:
+    """Beyond 512 bins we do not guess."""
+
+    with pytest.raises(LayoutError, match="pass nfft explicitly"):
+        resolve_nfft(np.asarray([-300.0, 300.0]))
 
 
 def test_reduced_subcarrier_axis_streams_like_batch() -> None:
@@ -118,34 +145,19 @@ def test_reduced_subcarrier_axis_streams_like_batch() -> None:
     np.testing.assert_allclose(streamed.values, batch.values, atol=1e-10)
 
 
-def test_axis_without_coordinates_falls_back_to_the_profile_when_sizes_match() -> None:
-    """An axis that lost its coordinates but still has every profile subcarrier
-    uses the profile's indices."""
-
-    csi = _csi()
-    profile, signal = _full_signal(csi)
-    plain = (
-        Pipeline()
-        .then(Magnitude())
-        .then(DelayAutocorrelation(nfft=128, num_taps=10))
-        .compile(profile)
-        .pour(signal)
-        .single()
-    )
-    assert plain.values.shape[-1] == 10
-
-
-def test_axis_without_coordinates_and_wrong_size_is_rejected() -> None:
-    """Missing coordinates and a size that differs from the profile leave the
-    subcarrier indices unknown, so compile must fail and say so."""
-
-    from csiphon.core.axes import Axis
-    from csiphon.steps.delay.delay_autocorrelation import subcarrier_indices_of
+@pytest.mark.parametrize("step", [DelayAutocorrelation(), ChannelImpulseResponse()])
+def test_axis_without_coordinates_is_rejected(step) -> None:
+    """Without coordinates the layout does not say which subcarriers it has, so
+    compile fails and says what is missing."""
 
     profile = _profile(_INDICES)
     layout = profile.raw_csi_layout().replace_axis(
-        AxisName.SUBCARRIER, Axis.sized(AxisName.SUBCARRIER, 57)
+        AxisName.SUBCARRIER, Axis.sized(AxisName.SUBCARRIER, len(_INDICES))
     )
+    pipeline = Pipeline()
+    if isinstance(step, DelayAutocorrelation):
+        pipeline = pipeline.then(Magnitude())
+    pipeline = pipeline.then(step)
 
-    with pytest.raises(LayoutError, match="57"):
-        subcarrier_indices_of(layout, profile)
+    with pytest.raises(CompileError, match="no coordinates"):
+        pipeline.compile(profile, inlet=layout)

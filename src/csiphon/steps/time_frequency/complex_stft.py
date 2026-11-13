@@ -41,7 +41,6 @@ from csiphon.core.arrays import (
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError, MissingDependencyError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import divide_nominal_rate, require_nominal_rate
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal, empty_signal
@@ -163,7 +162,7 @@ class ComplexStftMagnitude(Step):  # pylint: disable=too-many-instance-attribute
             note="time-frequency",
         )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Insert a frequency axis after time; drop the averaged axes."""
 
         self.require_inputs(layout)
@@ -218,9 +217,7 @@ class ComplexStftMagnitude(Step):  # pylint: disable=too-many-instance-attribute
             .with_values(output_values)
         )
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Compute the output of every window, and stamp each at its center."""
 
         # No samples means no windows; return early rather than index empty times.
@@ -241,9 +238,7 @@ class ComplexStftMagnitude(Step):  # pylint: disable=too-many-instance-attribute
             coords={AxisName.FREQUENCY: self._bin_frequencies(signal.layout)},
         )
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Ring-buffer operator emitting one spectrum per valid window."""
 
         taper = self._taper(_get_window())

@@ -11,53 +11,52 @@ from csiphon.core.arrays import RealArray, SignalArray, as_real_array, as_signal
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
 from csiphon.spec import Category, LayoutEffect, StepSpec, Streaming
 
-# WiFi uses a fixed FFT size (a power of two) per bandwidth, and only some of its
-# bins carry data. Given the number of used subcarriers, pick the smallest of
-# these FFT sizes that still fits them: 64 (20 MHz), 128 (40 MHz, ~114 used),
-# 256 (80 MHz), 512 (160 MHz).
+# WiFi uses a fixed FFT size (a power of two) per bandwidth, and the used
+# subcarriers sit at indices around zero on that grid: 64 (20 MHz), 128 (40 MHz,
+# indices -58 to 58), 256 (80 MHz), 512 (160 MHz).
 _FFT_SIZES = (64, 128, 256, 512)
 
 
-def resolve_nfft(n_subcarriers: int, nfft: int | None = None) -> int:
-    """Return nfft, inferring it from the subcarrier count when you leave it None."""
+def resolve_nfft(subcarrier_indices: RealArray, nfft: int | None = None) -> int:
+    """Return nfft, inferring it from the span of the subcarrier indices if None.
+
+    The smallest FFT size larger than the span keeps every index on its own bin.
+    """
 
     if nfft is not None:
         if nfft < 1:
             raise LayoutError(f"nfft must be >= 1, got {nfft}.")
         return nfft
+
+    span = float(subcarrier_indices.max() - subcarrier_indices.min())
     for size in _FFT_SIZES:
-        if n_subcarriers <= size:
+        if span < size:
             return size
     raise LayoutError(
-        f"cannot infer nfft for {n_subcarriers} subcarriers "
-        "(>512); pass nfft explicitly."
+        f"cannot infer nfft for subcarrier indices spanning {span:.0f} "
+        "(>= 512); pass nfft explicitly."
     )
 
 
-def subcarrier_indices_of(layout: Layout, profile: AcquisitionProfile) -> RealArray:
-    """Return the physical subcarrier indices of the signal's subcarrier axis.
+def subcarrier_indices_of(layout: Layout) -> RealArray:
+    """Return the physical subcarrier indices of the layout's subcarrier axis.
 
-    We read them from the axis coordinates, so a SelectAxis upstream is respected.
-    Without coordinates we use the profile's indices, which only fits if the axis
-    still has all of the profile's subcarriers.
+    They are the axis coordinates, so a SelectAxis upstream is respected.
     """
 
     axis = layout.require_static_axis(AxisName.SUBCARRIER)
-    if axis.coordinates is not None:
-        return as_real_array(np.asarray(axis.coordinates, dtype=float))
-    if axis.size == profile.n_subcarriers:
-        return as_real_array(np.asarray(profile.subcarrier_indices, dtype=float))
-    raise LayoutError(
-        f"the subcarrier axis has {axis.size} positions but no coordinates, and "
-        f"the profile has {profile.n_subcarriers} subcarriers; cannot tell which "
-        "subcarrier indices the data carries."
-    )
+    if axis.coordinates is None:
+        raise LayoutError(
+            "The subcarrier axis has no coordinates, so we cannot tell which "
+            "subcarrier indices the data carries. Give the axis the indices as "
+            "its coordinates."
+        )
+    return as_real_array(np.asarray(axis.coordinates, dtype=float))
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,8 +71,8 @@ class DelayAutocorrelation(PointwiseStep):
 
     The DFT uses the subcarrier indices of the input axis, so this step only works
     on the subcarrier axis. That axis may have been reduced earlier (e.g. by
-    SelectAxis). If `nfft` is None, we infer it from the profile, not from the
-    reduced axis.
+    SelectAxis). If `nfft` is None, we infer it from the span of the subcarrier
+    indices.
 
     The output is complex. For real values, follow with Magnitude, RealPart or
     ImagPart. For the impulse response itself, use ChannelImpulseResponse.
@@ -81,7 +80,7 @@ class DelayAutocorrelation(PointwiseStep):
 
     nfft: int | None = field(
         default=None,
-        metadata={"doc": "DFT size (inferred from subcarrier count if None)"},
+        metadata={"doc": "DFT size (inferred from the subcarrier indices if None)"},
     )
     first_tap: int = field(default=0, metadata={"doc": "first delay tap kept"})
     num_taps: int | None = field(
@@ -118,17 +117,14 @@ class DelayAutocorrelation(PointwiseStep):
             )
         return range(self.first_tap, last_tap)
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Replace the subcarrier axis with the kept delay taps."""
 
         self.require_inputs(layout)
-        layout.require_static_axis(AxisName.SUBCARRIER)
 
-        # Fail at compile time if the subcarrier indices cannot be determined.
-        subcarrier_indices_of(layout, profile)
-
-        # The profile (the whole channel), not the kept count, sets the FFT grid.
-        nfft = resolve_nfft(profile.n_subcarriers, self.nfft)
+        # Fails at compile time if the layout does not say which subcarriers it has.
+        indices = subcarrier_indices_of(layout)
+        nfft = resolve_nfft(indices, self.nfft)
         taps = self.kept_taps(nfft)
         delay = Axis.static(AxisName.DELAY, tuple(taps), unit="tap")
         return (
@@ -138,11 +134,7 @@ class DelayAutocorrelation(PointwiseStep):
         )
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Square the input to power, then inverse-DFT it across the subcarriers."""
 
@@ -152,8 +144,8 @@ class DelayAutocorrelation(PointwiseStep):
 
         # kernel[k, t] = exp(2j*pi*k*t/nfft): the inverse-DFT basis from subcarrier
         # index k to delay tap t, for the kept taps only.
-        subcarriers = subcarrier_indices_of(signal.layout, profile)
-        nfft = resolve_nfft(profile.n_subcarriers, self.nfft)
+        subcarriers = subcarrier_indices_of(signal.layout)
+        nfft = resolve_nfft(subcarriers, self.nfft)
         taps = np.asarray(self.kept_taps(nfft))
         kernel = np.exp(1j * 2.0 * np.pi * np.outer(subcarriers, taps) / nfft)
 

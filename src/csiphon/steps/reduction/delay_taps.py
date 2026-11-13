@@ -11,7 +11,6 @@ from csiphon.core.arrays import SignalArray, as_real_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -50,7 +49,7 @@ class DelayTaps(PointwiseStep):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Shrink the delay axis to the kept taps and drop to real values."""
 
         self.require_inputs(layout)
@@ -72,11 +71,7 @@ class DelayTaps(PointwiseStep):
         ).with_values(ValueKind.REAL)
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Slice out the taps, then take magnitudes or stack re/im."""
 

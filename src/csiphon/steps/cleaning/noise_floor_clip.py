@@ -7,7 +7,6 @@ from typing import ClassVar
 
 from csiphon.core.arrays import SignalArray, as_real_array
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -33,18 +32,14 @@ class NoiseFloorClip(PointwiseStep):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Structure and semantics are unchanged."""
 
         self.require_inputs(layout)
         return layout
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Raise everything below the floor to the floor."""
 

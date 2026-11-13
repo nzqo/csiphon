@@ -19,7 +19,6 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-from csiphon.core.axes import AxisName
 from csiphon.core.errors import CompileError, LayoutError
 from csiphon.core.layout import Layout
 from csiphon.core.profile import AcquisitionProfile
@@ -64,7 +63,6 @@ class Node:
     output      : str                   # line id this node writes
     op          : Step | Junction       # a 1->1 step or an N->1 junction
     out_layout  : Layout                # validated at compile time
-    out_profile : AcquisitionProfile    # the capture profile in force at this node
     # fmt: on
 
 
@@ -314,30 +312,23 @@ class Pipeline:  # pylint: disable=too-many-instance-attributes
             `compile(rx0=profile0, rx1=profile1, …)`, each with `n_receivers == 1`.
         """
 
-        # Start the layout/profile maps off with the inlets.
-        inlet_layouts, inlet_profiles = self._inlet_setup(profile, inlet, profiles)
+        # The profile only specifies the inputs: it gives each inlet its layout.
+        # Everything after that is carried by the layouts.
+        inlet_layouts = self._inlet_setup(profile, inlet, profiles)
         layouts: dict[str, Layout] = dict(inlet_layouts)
-        node_profiles: dict[str, AcquisitionProfile] = dict(inlet_profiles)
 
-        # Compile the nodes in order; each node's output layout and profile feed the
-        # later nodes that read its line.
+        # Compile the nodes in order; each node's output layout feeds the later
+        # nodes that read its line.
         compiled: list[Node] = []
         for number, node in enumerate(self._nodes, start=1):
-            out_layout, out_profile = _compile_node(
-                number, node, layouts, node_profiles
-            )
+            out_layout = _compile_node(number, node, layouts)
             layouts[node.output] = out_layout
-            node_profiles[node.output] = out_profile
-            compiled.append(
-                Node(node.inputs, node.output, node.op, out_layout, out_profile)
-            )
+            compiled.append(Node(node.inputs, node.output, node.op, out_layout))
 
         # Invert the builder's label map so the Siphon can name lines (branch names,
         # merge inputs) when it describes itself.
         labels = {line: name for name, line in self._names.items()}
-        primary = (
-            profile if profile is not None else next(iter(inlet_profiles.values()))
-        )
+        primary = profile if profile is not None else next(iter(profiles.values()))
         return Siphon(
             primary,
             inlet_layouts,
@@ -352,8 +343,8 @@ class Pipeline:  # pylint: disable=too-many-instance-attributes
         profile: AcquisitionProfile | None,
         inlet: Layout | None,
         profiles: dict[str, AcquisitionProfile],
-    ) -> tuple[dict[str, Layout], dict[str, AcquisitionProfile]]:
-        """Resolve each inlet's layout and profile for the three compile modes."""
+    ) -> dict[str, Layout]:
+        """Resolve each inlet's layout for the three compile modes."""
 
         # Mode 2: one profile per inlet (heterogeneous devices).
         if profiles:
@@ -368,10 +359,7 @@ class Pipeline:  # pylint: disable=too-many-instance-attributes
                     raise LayoutError(
                         f"Per-device profile '{name}' must have n_receivers=1."
                     )
-            return (
-                {inlet_id(n): profiles[n].raw_csi_layout() for n in self._inlets},
-                {inlet_id(n): profiles[n] for n in self._inlets},
-            )
+            return {inlet_id(n): profiles[n].raw_csi_layout() for n in self._inlets}
 
         if profile is None:
             raise LayoutError("compile needs a profile (or one profile per inlet).")
@@ -387,19 +375,15 @@ class Pipeline:  # pylint: disable=too-many-instance-attributes
                     f"profile.n_receivers ({profile.n_receivers}) must equal the "
                     f"number of inlets ({len(self._inlets)})."
                 )
-            one = replace(profile, n_receivers=1)
-            per_receiver = one.raw_csi_layout()
-            return (
-                {inlet_id(name): per_receiver for name in self._inlets},
-                {inlet_id(name): one for name in self._inlets},
-            )
+            per_receiver = replace(profile, n_receivers=1).raw_csi_layout()
+            return {inlet_id(name): per_receiver for name in self._inlets}
 
         # Single unnamed inlet (the original path). An inlet layout without a rate
         # takes the profile's, so the profile's rate works for it as well.
         inlet_layout = profile.raw_csi_layout() if inlet is None else inlet
         if inlet_layout.nominal_rate_hz is None:
             inlet_layout = inlet_layout.with_nominal_rate(profile.sampling_rate_hz)
-        return {INLET: inlet_layout}, {INLET: profile}
+        return {INLET: inlet_layout}
 
     def _resolve_outlets(self) -> dict[str, str]:
         """Map each output's display name to its line id (probes + terminal lines)."""
@@ -439,71 +423,27 @@ class Pipeline:  # pylint: disable=too-many-instance-attributes
         return PipelineDescription(None, None, steps, labels=labels, outlets=outlets)
 
 
-def _compile_node(
-    number: int,
-    node: _BuildNode,
-    layouts: dict[str, Layout],
-    profiles: dict[str, AcquisitionProfile],
-) -> tuple[Layout, AcquisitionProfile]:
-    """Compile one node into its output layout and the profile in force there.
-
-    A step keeps its single input's profile (the capture rate and subcarriers do
-    not change as data flows). A merge reconciles its branches: the rate comes
-    from the alignment's reference branch (whose timeline the output lands on),
-    and the receiver/antenna counts are read straight off the merged layout, so
-    they can never drift from the real shape.
-    """
+def _compile_node(number: int, node: _BuildNode, layouts: dict[str, Layout]) -> Layout:
+    """Compile one node into its output layout."""
 
     # A layout error here becomes a CompileError that names the step, so it points at
     # the recipe line that failed.
     try:
-        # A junction reconciles all its branch layouts and profiles into one.
+        # A junction reconciles all its branch layouts into one.
         if isinstance(node.op, Junction):
             in_layouts = [layouts[i] for i in node.inputs]
-            in_profiles = [profiles[i] for i in node.inputs]
             out_layout = node.op.output_layout(in_layouts)
 
             # The merged signal lies on the reference branch's timeline.
             reference = in_layouts[node.op.align.reference]
-            out_layout = out_layout.with_nominal_rate(reference.nominal_rate_hz)
-            return out_layout, _merged_profile(in_profiles, node.op, out_layout)
+            return out_layout.with_nominal_rate(reference.nominal_rate_hz)
 
-        # A plain step takes its single input line and keeps that line's profile.
-        in_profile = profiles[node.inputs[0]]
-        return node.op.output_layout(layouts[node.inputs[0]], in_profile), in_profile
+        # A plain step reads its single input line.
+        return node.op.output_layout(layouts[node.inputs[0]])
     except LayoutError as error:
         raise CompileError(
             f"Pipeline compilation failed at step {number}, '{node.op.name}': {error}"
         ) from error
-
-
-def _merged_profile(
-    inputs: list[AcquisitionProfile], junction: Junction, out_layout: Layout
-) -> AcquisitionProfile:
-    """Profile after a merge: rate from the alignment reference, shape from layout."""
-
-    # The alignment decides whose timeline the merged stream lands on. Hold picks a
-    # reference branch; Exact sits on the shared grid and keeps the default 0, so the
-    # first branch's rate is representative.
-    return _profile_from_layout(inputs[junction.align.reference], out_layout)
-
-
-def _profile_from_layout(
-    base: AcquisitionProfile, layout: Layout
-) -> AcquisitionProfile:
-    """`base`'s rate/subcarriers, but device counts read off `layout`'s axes."""
-
-    def axis_size(name: AxisName) -> int:
-        """The device count on `name`, or 1 when the layout has no such axis."""
-
-        return layout.axis(name).size or 1 if layout.has_axis(name) else 1
-
-    return replace(
-        base,
-        n_receivers=axis_size(AxisName.RECEIVER),
-        n_tx_antennas=axis_size(AxisName.TX_ANTENNA),
-        n_rx_antennas=axis_size(AxisName.RX_ANTENNA),
-    )
 
 
 @dataclass(frozen=True, slots=True)

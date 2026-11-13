@@ -15,7 +15,6 @@ from csiphon.core.arrays import SignalArray, as_signal_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -123,7 +122,7 @@ class AxisReference(PointwiseStep):
             else Representation.CROSS_SPECTRUM
         )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Relabel to a ratio / cross-spectrum, shrinking the axis when it reduces."""
 
         self.require_inputs(layout)
@@ -154,11 +153,7 @@ class AxisReference(PointwiseStep):
         return relabeled.replace_axis(self.axis, _shrunk_axis(axis, kept))
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Divide by, or conjugate-multiply against, the reference positions."""
 

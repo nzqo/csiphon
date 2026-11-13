@@ -47,12 +47,12 @@ class TheStep(PointwiseStep):  # or Step for non-pointwise
         streaming=Streaming.BATCH_EQUIVALENT,  # BATCH_EQUIVALENT | BATCH_DIVERGENT | UNAVAILABLE
     )
 
-    def output_layout(self, layout, profile):
+    def output_layout(self, layout):
         self.require_inputs(layout)  # guards first: enforces the spec
         ...  # then build and return the output layout
 
     def transform_values(
-        self, values, signal, out_layout, profile
+        self, values, signal, out_layout
     ): ...  # PointwiseStep: batch + exact streaming for free
 ```
 
@@ -71,6 +71,14 @@ Rules of thumb:
   `axis=` parameter and override `resolve_required_axes()`; only steps that are
   genuinely tied to a physical dimension (delay-ACF needs subcarrier indices,
   dyadic bands need frequencies) hard-code an axis name.
+- **Facts come from the layout.** A step reads axes, subcarrier indices and the
+  nominal sampling rate from the layout it gets (`require_nominal_rate(layout,
+  self.name)` for the rate). The profile only specifies the pipeline's input.
+  A step that changes the sampling grid (keeps every Nth sample, emits one
+  sample per hop, resamples) sets the new rate on its output layout, with
+  `divide_nominal_rate` or `Layout.with_nominal_rate`. A contract test in
+  `tests/test_step_contracts.py` compares it with the output timestamps of every
+  step.
 - **Batch is always the best algorithm.** `process` runs the full
   whole-recording computation; `stream` returns a `StreamOperator` (or `None` if
   batch-only). A `PointwiseStep` derives both from `transform_values`.

@@ -24,6 +24,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Resample`, `FixedSizeWindowSum`, `WindowedFFTPower`, `Multitaper`,
   `ComplexStftMagnitude`, `CovarianceSpectrum` and `LocalPcaBias`. A merge takes
   the rate of its reference branch.
+- The profile only specifies the input. Steps no longer receive it:
+  `output_layout`, `process`, `stream` and `transform_values` lost their
+  `profile` argument, so custom steps need that argument removed. Steps read the
+  axes, the subcarrier indices and the nominal rate from the layout.
+- `resolve_nfft` takes the subcarrier indices instead of their count, and infers
+  `nfft` from their span. A full capture gives the same result (128 for 40 MHz).
+  A reduced subcarrier axis can give a smaller `nfft`, for example 64 for a
+  contiguous block of 57 subcarriers.
+- `DelayAutocorrelation` and `ChannelImpulseResponse` need the subcarrier axis to
+  carry its indices as coordinates. Raw layouts always do.
+
+### Removed
+
+- `AcquisitionProfile.require_sampling_rate`, and the per-step profile in
+  compiled pipelines (`Node.out_profile`).
 
 ## [0.5.2] - 2026-11-10
 

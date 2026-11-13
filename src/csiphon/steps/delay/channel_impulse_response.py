@@ -11,7 +11,6 @@ from csiphon.core.arrays import RealArray, SignalArray, as_signal_array
 from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -51,7 +50,7 @@ class ChannelImpulseResponse(PointwiseStep):
     streams exactly.
 
     Works on a reduced subcarrier axis (e.g. after SelectAxis). If `nfft` is None,
-    we infer it from the profile, not from the reduced axis.
+    we infer it from the span of the subcarrier indices.
     """
 
     num_taps: int | None = field(
@@ -59,7 +58,7 @@ class ChannelImpulseResponse(PointwiseStep):
     )
     nfft: int | None = field(
         default=None,
-        metadata={"doc": "DFT size (inferred from subcarrier count if None)"},
+        metadata={"doc": "DFT size (inferred from the subcarrier indices if None)"},
     )
 
     spec: ClassVar[StepSpec] = StepSpec(
@@ -76,24 +75,20 @@ class ChannelImpulseResponse(PointwiseStep):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def _taps_and_nfft(self, profile: AcquisitionProfile) -> tuple[int, int]:
+    def _taps_and_nfft(self, indices: RealArray) -> tuple[int, int]:
         """Resolve (num_taps, nfft): the full DFT length when num_taps is None."""
 
-        # The profile (the whole channel), sets the FFT grid.
-        # In case of subselection through AxisSelection or similar, set num_taps
-        # explicitly.
-        nfft = resolve_nfft(profile.n_subcarriers, self.nfft)
-
+        nfft = resolve_nfft(indices, self.nfft)
         return (nfft if self.num_taps is None else self.num_taps), nfft
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Replace the subcarrier axis with the estimated complex delay taps."""
 
         self.require_inputs(layout)
-        # Fail at compile time if the subcarrier indices cannot be determined.
-        subcarrier_indices_of(layout, profile)
+        # Fails at compile time if the layout does not say which subcarriers it has.
+        indices = subcarrier_indices_of(layout)
 
-        num_taps, nfft = self._taps_and_nfft(profile)
+        num_taps, nfft = self._taps_and_nfft(indices)
         if not 1 <= num_taps <= nfft:
             raise LayoutError(
                 f"num_taps={num_taps} must be in [1, {nfft}] (at most nfft)."
@@ -104,11 +99,7 @@ class ChannelImpulseResponse(PointwiseStep):
         )
 
     def transform_values(
-        self,
-        values: SignalArray,
-        signal: Signal,
-        out_layout: Layout,
-        profile: AcquisitionProfile,
+        self, values: SignalArray, signal: Signal, out_layout: Layout
     ) -> SignalArray:
         """Estimate the CIR by a matmul with the pseudoinverse estimator matrix."""
 
@@ -116,8 +107,8 @@ class ChannelImpulseResponse(PointwiseStep):
         position = signal.layout.axis_position(AxisName.SUBCARRIER)
         channel = np.moveaxis(as_signal_array(values), position, -1)
 
-        num_taps, nfft = self._taps_and_nfft(profile)
-        subcarriers = subcarrier_indices_of(signal.layout, profile)
+        subcarriers = subcarrier_indices_of(signal.layout)
+        num_taps, nfft = self._taps_and_nfft(subcarriers)
 
         # The estimator maps subcarriers to delay taps, so this matmul
         # turns the CSI into the estimated CIR.

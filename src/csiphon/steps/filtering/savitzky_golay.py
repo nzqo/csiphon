@@ -10,7 +10,6 @@ from csiphon.core.arrays import as_signal_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import DataError, LayoutError, MissingDependencyError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import Step
@@ -56,7 +55,7 @@ class SavitzkyGolay(Step):
         streaming_note="centered (non-causal) filter, so batch-only; needs scipy",
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Shape and semantics are unchanged; the signal is only smoothed."""
 
         self.require_inputs(layout)
@@ -70,9 +69,7 @@ class SavitzkyGolay(Step):
             raise LayoutError("SavitzkyGolay needs polyorder < window_length.")
         return layout
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Apply the Savitzky-Golay filter along the time axis."""
 
         time_index = signal.layout.dynamic_index

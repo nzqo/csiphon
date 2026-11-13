@@ -12,7 +12,6 @@ from csiphon.core.arrays import RealArray, as_real_array
 from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError, StreamingError
 from csiphon.core.layout import Layout
-from csiphon.core.profile import AcquisitionProfile
 from csiphon.core.sampling import check_jitter, effective_rate_hz
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal, empty_signal
@@ -48,7 +47,7 @@ class WindowedVariance(Step):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
+    def output_layout(self, layout: Layout) -> Layout:
         """Shape and semantics are unchanged; each value becomes its variance."""
 
         self.require_inputs(layout)
@@ -61,18 +60,14 @@ class WindowedVariance(Step):
 
         return max(1, round(self.win_size_s * rate_hz))
 
-    def process(
-        self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
-    ) -> Signal:
+    def process(self, signal: Signal, out_layout: Layout) -> Signal:
         """Run the rolling variance over the whole recording."""
 
         check_jitter(signal.times, step=self.name, strict=self.strict)
         rate_hz = effective_rate_hz(signal.times, signal.layout.nominal_rate_hz)
         return _WindowedVarianceOperator(self._window(rate_hz), out_layout).push(signal)
 
-    def stream(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> StreamOperator | None:
+    def stream(self, in_layout: Layout, out_layout: Layout) -> StreamOperator | None:
         """Carry the trailing window across chunks; needs a known rate to size it."""
 
         rate_hz = in_layout.nominal_rate_hz
