@@ -72,7 +72,7 @@ class WindowedSlope(Step):
 
         inv_dt = 1.0
         if self.scale_by_dt:
-            inv_dt = effective_rate_hz(signal.times, profile.sampling_rate_hz)
+            inv_dt = effective_rate_hz(signal.times, signal.layout.nominal_rate_hz)
         return _WindowedSlopeOperator(self.window_size, inv_dt, out_layout).push(signal)
 
     def stream(
@@ -82,14 +82,15 @@ class WindowedSlope(Step):
 
         inv_dt = 1.0
         if self.scale_by_dt:
-            if profile.sampling_rate_hz is None:
+            rate_hz = in_layout.nominal_rate_hz
+            if rate_hz is None:
                 raise StreamingError(
                     f"'{self.name}' cannot compute a per-second slope while streaming "
                     "without a known sampling rate. Set "
                     "AcquisitionProfile.sampling_rate_hz, set scale_by_dt=False, "
                     "or process the signal in batch."
                 )
-            inv_dt = profile.sampling_rate_hz
+            inv_dt = rate_hz
         return _WindowedSlopeOperator(self.window_size, inv_dt, out_layout)
 
 

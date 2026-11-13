@@ -15,6 +15,7 @@ from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
 from csiphon.core.profile import AcquisitionProfile
+from csiphon.core.sampling import divide_nominal_rate
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import Step, StreamOperator
@@ -168,8 +169,10 @@ class CovarianceSpectrum(Step):
         if self.hop_size < 1:
             raise LayoutError(f"hop_size must be >= 1, got {self.hop_size}.")
         stats = Axis.sized(AxisName.FEATURE, _N_STATS)
+        # One output sample per hop, so the output rate is the input rate over it.
         return (
-            layout.replace_axis(self.axis, stats)
+            divide_nominal_rate(layout, self.hop_size)
+            .replace_axis(self.axis, stats)
             .with_values(ValueKind.REAL)
             .with_representation(Representation.FEATURE_VECTOR)
         )

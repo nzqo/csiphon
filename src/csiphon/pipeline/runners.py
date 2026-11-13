@@ -113,6 +113,19 @@ def _inlet_signals(
     return signals
 
 
+def _with_inlet_rate(signal: Signal, expected: Layout) -> Signal:
+    """Return the signal carrying the nominal rate of the pipeline's inlet layout.
+
+    Steps read the rate from the layout of the data they get. Taking it from the
+    compiled inlet keeps the run consistent with what the pipeline was compiled for.
+    """
+
+    if signal.layout.nominal_rate_hz == expected.nominal_rate_hz:
+        return signal
+    layout = signal.layout.with_nominal_rate(expected.nominal_rate_hz)
+    return signal.with_values(signal.values, layout)
+
+
 def _seed_inlets(
     siphon: Siphon, signals: Signal | Mapping[str, Signal], *, allow_partial: bool
 ) -> dict[str, Signal]:
@@ -125,7 +138,7 @@ def _seed_inlets(
 
     if isinstance(signals, Signal):
         _check_inlet(signals, siphon.inlet_layout)
-        return {INLET: signals}
+        return {INLET: _with_inlet_rate(signals, siphon.inlet_layout)}
 
     # Place each given signal on its inlet, checking its structure as we go.
     env: dict[str, Signal] = {}
@@ -134,7 +147,7 @@ def _seed_inlets(
         if line not in siphon.inlet_layouts:
             raise DataError(f"Unknown inlet '{name}'.")
         _check_inlet(signal, siphon.inlet_layouts[line])
-        env[line] = signal
+        env[line] = _with_inlet_rate(signal, siphon.inlet_layouts[line])
 
     # An inlet with no signal this round: an error in batch, an empty chunk when
     # streaming (so the merge just holds what it has).

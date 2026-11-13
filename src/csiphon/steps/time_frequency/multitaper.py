@@ -16,7 +16,11 @@ from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError, MissingDependencyError
 from csiphon.core.layout import Layout
 from csiphon.core.profile import AcquisitionProfile
-from csiphon.core.sampling import check_jitter
+from csiphon.core.sampling import (
+    check_jitter,
+    divide_nominal_rate,
+    require_nominal_rate,
+)
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import Step, StreamOperator
@@ -170,23 +174,23 @@ class Multitaper(Step):
 
         # Size the windows from the sampling rate, then work out which rFFT
         # frequency bins fall within band_hz. Those bins become the frequency axis.
-        rate_hz = profile.require_sampling_rate(self.name)
+        rate_hz = require_nominal_rate(layout, self.name)
         geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
         kept_frequencies, _ = rfft_band(geometry.window_size, rate_hz, self.band_hz)
         frequency = Axis.static(AxisName.FREQUENCY, tuple(kept_frequencies), unit="Hz")
 
+        # One output sample per hop, so the output rate is the input rate over it.
         return (
-            layout.replace_axis(self.axis, frequency)
+            divide_nominal_rate(layout, geometry.hop_stride)
+            .replace_axis(self.axis, frequency)
             .with_representation(Representation.TIME_FREQUENCY)
             .with_values(ValueKind.POWER)
         )
 
-    def _operator(
-        self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
-    ) -> WindowedOperator:
+    def _operator(self, in_layout: Layout, out_layout: Layout) -> WindowedOperator:
         """Build the windowing operator with a DPSS-multitaper frame function."""
 
-        rate_hz = profile.require_sampling_rate(self.name)
+        rate_hz = require_nominal_rate(in_layout, self.name)
         geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
         _, keep = rfft_band(geometry.window_size, rate_hz, self.band_hz)
         tapers = _dpss_tapers(
@@ -207,11 +211,11 @@ class Multitaper(Step):
         """Compute the multitaper spectrogram over the whole recording."""
 
         check_jitter(signal.times, step=self.name, strict=self.strict)
-        return self._operator(signal.layout, out_layout, profile).push(signal)
+        return self._operator(signal.layout, out_layout).push(signal)
 
     def stream(
         self, in_layout: Layout, out_layout: Layout, profile: AcquisitionProfile
     ) -> StreamOperator | None:
         """Emit one spectrum per completed window, carrying the buffer."""
 
-        return self._operator(in_layout, out_layout, profile)
+        return self._operator(in_layout, out_layout)

@@ -105,6 +105,14 @@ class Layout:
 
         return name in self.axis_names
 
+    @property
+    def nominal_rate_hz(self) -> float | None:
+        """Return the time axis's nominal rate in Hz (None if unknown)."""
+
+        if not self.has_axis(AxisName.TIME):
+            return None
+        return self.axis(AxisName.TIME).nominal_rate_hz
+
     # -------------------------------------------------------------------------
     # Requirements (used by Step.output_layout)
     # -------------------------------------------------------------------------
@@ -174,6 +182,14 @@ class Layout:
         axes = list(self.axes)
         axes[position] = new_axis
         return replace(self, axes=tuple(axes))
+
+    def with_nominal_rate(self, rate_hz: float | None) -> Layout:
+        """Return this layout with another nominal rate on its time axis."""
+
+        if not self.has_axis(AxisName.TIME):
+            return self
+        time_axis = replace(self.axis(AxisName.TIME), nominal_rate_hz=rate_hz)
+        return self.replace_axis(AxisName.TIME, time_axis)
 
     def insert_axis_after(self, existing: AxisName, new_axis: Axis) -> Layout:
         """Insert a new axis directly after an existing one."""

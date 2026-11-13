@@ -42,6 +42,7 @@ from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError, MissingDependencyError
 from csiphon.core.layout import Layout
 from csiphon.core.profile import AcquisitionProfile
+from csiphon.core.sampling import divide_nominal_rate, require_nominal_rate
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal, empty_signal
 from csiphon.pipeline.step import Step, StreamOperator
@@ -75,8 +76,9 @@ def _get_window() -> Callable[..., RealArray]:
     return get_window  # type: ignore[no-any-return]
 
 
+# One dataclass field per option, so the attribute count follows the options.
 @dataclass(frozen=True, slots=True)
-class ComplexStftMagnitude(Step):
+class ComplexStftMagnitude(Step):  # pylint: disable=too-many-instance-attributes
     """STFT magnitude of a complex signal, computed along time.
 
     Time must be the first axis. We add a frequency axis after it and leave all
@@ -86,7 +88,7 @@ class ComplexStftMagnitude(Step):
     For each window we apply a Hann taper, zero-pad to `nfft`, take the FFT, and
     keep `freq_bins` bins. By default these are the first bins (DC, then positive
     frequencies). If `signed_bins` is True, they are the bins nearest DC, in
-    ascending frequency. The profile needs a sampling rate.
+    ascending frequency. The time axis needs a nominal sampling rate.
 
     Streaming differs from batch only at the recording ends, unless
     `edges="valid"` (see the module docstring).
@@ -202,14 +204,15 @@ class ComplexStftMagnitude(Step):
 
         # The frequency axis carries the Hz value of every kept bin.
         frequency = Axis.static(
-            AxisName.FREQUENCY, tuple(self._bin_frequencies(profile)), unit="Hz"
+            AxisName.FREQUENCY, tuple(self._bin_frequencies(layout)), unit="Hz"
         )
 
         # Drop the averaged axes, put the frequency axis right after time, and
         # relabel the values: power if we square them, magnitude otherwise.
         output_values = ValueKind.POWER if self.power else ValueKind.MAGNITUDE
+        # One output window per hop, so the output rate is the input rate over it.
         return (
-            layout.remove_axes(self.mean_over)
+            divide_nominal_rate(layout.remove_axes(self.mean_over), self.hop_size)
             .insert_axis_after(AxisName.TIME, frequency)
             .with_representation(Representation.TIME_FREQUENCY)
             .with_values(output_values)
@@ -235,7 +238,7 @@ class ComplexStftMagnitude(Step):
             output,
             out_layout,
             times=signal.times[centers],
-            coords={AxisName.FREQUENCY: self._bin_frequencies(profile)},
+            coords={AxisName.FREQUENCY: self._bin_frequencies(signal.layout)},
         )
 
     def stream(
@@ -388,10 +391,10 @@ class ComplexStftMagnitude(Step):
         start = self.fft_length // 2 - self.freq_bins // 2
         return shifted[start : start + self.freq_bins]
 
-    def _bin_frequencies(self, profile: AcquisitionProfile) -> np.ndarray:
+    def _bin_frequencies(self, layout: Layout) -> np.ndarray:
         """The physical frequency of each kept two-sided bin, in Hz."""
 
-        rate_hz = profile.require_sampling_rate(self.name)
+        rate_hz = require_nominal_rate(layout, self.name)
 
         # fftfreq follows raw FFT order, so bins past nfft / 2 come out negative.
         frequencies = np.fft.fftfreq(self.fft_length, 1.0 / rate_hz)

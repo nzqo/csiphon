@@ -17,7 +17,11 @@ from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
 from csiphon.core.profile import AcquisitionProfile
-from csiphon.core.sampling import check_jitter
+from csiphon.core.sampling import (
+    check_jitter,
+    divide_nominal_rate,
+    require_nominal_rate,
+)
 from csiphon.core.semantics import Representation, ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import Step, StreamOperator
@@ -78,12 +82,15 @@ class WindowedFFTPower(Step):
         if self.band_hz <= 0:
             raise LayoutError(f"band_hz must be > 0, got {self.band_hz}.")
 
-        rate_hz = profile.require_sampling_rate(self.name)
+        rate_hz = require_nominal_rate(layout, self.name)
         geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
         kept_frequencies, _ = rfft_band(geometry.window_size, rate_hz, self.band_hz)
         frequency = Axis.static(AxisName.FREQUENCY, tuple(kept_frequencies), unit="Hz")
+
+        # One output sample per hop, so the output rate is the input rate over it.
         return (
-            layout.insert_axis_after(AxisName.TIME, frequency)
+            divide_nominal_rate(layout, geometry.hop_stride)
+            .insert_axis_after(AxisName.TIME, frequency)
             .with_representation(Representation.TIME_FREQUENCY)
             .with_values(ValueKind.POWER)
         )
@@ -94,7 +101,7 @@ class WindowedFFTPower(Step):
         """Gather sliding windows and take Hann-windowed FFT power."""
 
         check_jitter(signal.times, step=self.name, strict=self.strict)
-        rate_hz = profile.require_sampling_rate(self.name)
+        rate_hz = require_nominal_rate(signal.layout, self.name)
         geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
         kept_frequencies, keep = rfft_band(geometry.window_size, rate_hz, self.band_hz)
 
@@ -126,7 +133,7 @@ class WindowedFFTPower(Step):
     ) -> StreamOperator | None:
         """Ring-buffer operator that emits one spectrum per completed window."""
 
-        rate_hz = profile.require_sampling_rate(self.name)
+        rate_hz = require_nominal_rate(in_layout, self.name)
         geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
         _, keep = rfft_band(geometry.window_size, rate_hz, self.band_hz)
         frame_fn = _hann_fft_power(geometry.window_size, keep)

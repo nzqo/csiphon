@@ -67,7 +67,7 @@ class WindowedVariance(Step):
         """Run the rolling variance over the whole recording."""
 
         check_jitter(signal.times, step=self.name, strict=self.strict)
-        rate_hz = effective_rate_hz(signal.times, profile.sampling_rate_hz)
+        rate_hz = effective_rate_hz(signal.times, signal.layout.nominal_rate_hz)
         return _WindowedVarianceOperator(self._window(rate_hz), out_layout).push(signal)
 
     def stream(
@@ -75,16 +75,15 @@ class WindowedVariance(Step):
     ) -> StreamOperator | None:
         """Carry the trailing window across chunks; needs a known rate to size it."""
 
-        if profile.sampling_rate_hz is None:
+        rate_hz = in_layout.nominal_rate_hz
+        if rate_hz is None:
             raise StreamingError(
                 f"'{self.name}' needs a known sampling rate while streaming because "
                 f"win_size_s={self.win_size_s} seconds must be converted into a number "
                 "of samples. Set AcquisitionProfile.sampling_rate_hz or process the "
                 "signal in batch, where the rate can be inferred from the timestamps."
             )
-        return _WindowedVarianceOperator(
-            self._window(profile.sampling_rate_hz), out_layout
-        )
+        return _WindowedVarianceOperator(self._window(rate_hz), out_layout)
 
 
 class _WindowedVarianceOperator(StreamOperator):

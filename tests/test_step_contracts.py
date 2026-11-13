@@ -341,6 +341,27 @@ def test_step_output_shape_matches_its_layout_effect(cls: type[Step]) -> None:
         assert out_values == layout.values  # unchanged when not declared
 
 
+@pytest.mark.parametrize("cls", CONCRETE_STEPS, ids=STEP_IDS)
+def test_nominal_rate_matches_the_output_timestamps(cls: type[Step]) -> None:
+    """The nominal rate a step leaves on the time axis is the real rate of its output.
+
+    A step that changes the sampling grid (keeps every Nth sample, hops over
+    windows, resamples) must say so in its output layout. Otherwise later steps
+    turn seconds into samples with a stale rate. The tolerance covers hops that
+    are not a whole number of samples.
+    """
+
+    step = _instance(cls)
+    layout = _layout(cls, _accepted_value(step))
+    compiled = Pipeline().then(step).compile(PROFILE, inlet=layout)
+    output = compiled.pour(_signal(layout)).single()
+
+    declared = compiled.outlet_layout.nominal_rate_hz
+    measured = 1.0 / np.median(np.diff(output.times))
+    assert declared is not None
+    assert declared == pytest.approx(measured, rel=0.1)
+
+
 # --- the static declaration may never lie about the resolved contract ---------
 
 

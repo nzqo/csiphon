@@ -144,14 +144,14 @@ class SynchrosqueezedPower(Step):
 
         values = as_real_array(signal.values)
         if self.block_size is None:
-            rate_hz = effective_rate_hz(signal.times, profile.sampling_rate_hz)
+            rate_hz = effective_rate_hz(signal.times, signal.layout.nominal_rate_hz)
             power, frequencies = _sst_power(values, rate_hz, self.voices_per_octave)
             return signal.with_values(
                 power, out_layout, coords={AxisName.FREQUENCY: frequencies}
             )
 
         block_local, _ = self.block_local(
-            values, signal.times, profile.sampling_rate_hz, out_layout
+            values, signal.times, signal.layout.nominal_rate_hz, out_layout
         )
         return block_local
 
@@ -211,7 +211,7 @@ class SynchrosqueezedPower(Step):
 
         if self.block_size is None:
             return None
-        return _BlockLocalSst(self, profile.sampling_rate_hz, out_layout)
+        return _BlockLocalSst(self, in_layout.nominal_rate_hz, out_layout)
 
 
 class _BlockLocalSst(StreamOperator):

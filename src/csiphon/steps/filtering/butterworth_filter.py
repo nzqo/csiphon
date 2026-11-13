@@ -142,7 +142,7 @@ class ButterworthFilter(Step):
             raise LayoutError("ButterworthFilter requires a time axis.")
 
         scipy_signal = _scipy_signal()
-        rate_hz = effective_rate_hz(signal.times, profile.sampling_rate_hz)
+        rate_hz = effective_rate_hz(signal.times, signal.layout.nominal_rate_hz)
         numerator, denominator = _design(
             self.order, self.cutoff_hz, self.btype, rate_hz
         )
@@ -156,10 +156,11 @@ class ButterworthFilter(Step):
     ) -> StreamOperator | None:
         """Return a causal lfilter operator (needs a nominal rate)."""
 
-        if profile.sampling_rate_hz is None:
+        rate_hz = in_layout.nominal_rate_hz
+        if rate_hz is None:
             return None
         numerator, denominator = _design(
-            self.order, self.cutoff_hz, self.btype, profile.sampling_rate_hz
+            self.order, self.cutoff_hz, self.btype, rate_hz
         )
         return _CausalFilter(numerator, denominator, out_layout)
 

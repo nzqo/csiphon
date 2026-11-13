@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-13
+
+### Fixed
+
+- Steps after `SubsampleEvery`, `Resample` or a windowing step still used the
+  sampling rate of the original capture. After `SubsampleEvery(8)`, a
+  `FixedSizeWindowSum(0.128, 0.1)` summed 1 s windows every 0.8 s. These steps
+  now pass their new rate on.
+
+### Changed
+
+- The nominal sampling rate lives on the time axis (`Axis.nominal_rate_hz`,
+  read with `Layout.nominal_rate_hz`). The profile still sets it at the inlet.
+  Steps that change the sampling grid write the new rate: `SubsampleEvery`,
+  `Resample`, `FixedSizeWindowSum`, `WindowedFFTPower`, `Multitaper`,
+  `ComplexStftMagnitude`, `CovarianceSpectrum` and `LocalPcaBias`. A merge takes
+  the rate of its reference branch.
+
 ## [0.5.2] - 2026-11-10
 
 ### Changed
@@ -151,7 +169,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional extras: `filters` (scipy) and `sst` (ssqueezepy); the base install is
   numpy-only. Ships `py.typed`.
 
-[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/nzqo/csiphon/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/nzqo/csiphon/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/nzqo/csiphon/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/nzqo/csiphon/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/nzqo/csiphon/compare/v0.4.0...v0.5.0

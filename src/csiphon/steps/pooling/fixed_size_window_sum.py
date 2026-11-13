@@ -12,7 +12,7 @@ from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError, StreamingError
 from csiphon.core.layout import Layout
 from csiphon.core.profile import AcquisitionProfile
-from csiphon.core.sampling import check_jitter, effective_rate_hz
+from csiphon.core.sampling import check_jitter, divide_nominal_rate, effective_rate_hz
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import Step, StreamOperator
@@ -57,7 +57,14 @@ class FixedSizeWindowSum(Step):
             raise LayoutError(f"window_s must be > 0, got {self.window_s}.")
         if self.hop_s <= 0:
             raise LayoutError(f"hop_s must be > 0, got {self.hop_s}.")
-        return layout
+
+        # One output sample per hop. Without a known input rate the output has none.
+        if layout.nominal_rate_hz is None:
+            return layout
+        hop_stride = WindowGeometry.from_seconds(
+            layout.nominal_rate_hz, self.window_s, self.hop_s
+        ).hop_stride
+        return divide_nominal_rate(layout, hop_stride)
 
     def process(
         self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile
@@ -69,7 +76,7 @@ class FixedSizeWindowSum(Step):
             raise ValueError("FixedSizeWindowSum requires a time axis.")
 
         check_jitter(signal.times, step=self.name, strict=self.strict)
-        rate_hz = effective_rate_hz(signal.times, profile.sampling_rate_hz)
+        rate_hz = effective_rate_hz(signal.times, signal.layout.nominal_rate_hz)
         geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
         values = as_real_array(np.moveaxis(signal.values, time_index, 0))
         starts, centers = geometry.indices(values.shape[0])
@@ -93,16 +100,15 @@ class FixedSizeWindowSum(Step):
     ) -> StreamOperator | None:
         """Ring-buffer operator that emits one window sum at a time."""
 
-        if profile.sampling_rate_hz is None:
+        rate_hz = in_layout.nominal_rate_hz
+        if rate_hz is None:
             raise StreamingError(
                 f"'{self.name}' aggregates over a fixed number of samples per "
                 "window (window_s * sampling_rate; the fixed size is an "
                 "implementation detail). Streaming has to know that size up "
                 "front, so set AcquisitionProfile.sampling_rate_hz or run in batch."
             )
-        geometry = WindowGeometry.from_seconds(
-            profile.sampling_rate_hz, self.window_s, self.hop_s
-        )
+        geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
         return WindowedOperator(
             geometry,
             lambda block: as_real_array(block.sum(axis=0)),

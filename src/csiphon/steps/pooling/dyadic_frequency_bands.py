@@ -12,6 +12,7 @@ from csiphon.core.axes import Axis, AxisName
 from csiphon.core.errors import DataError, LayoutError
 from csiphon.core.layout import Layout
 from csiphon.core.profile import AcquisitionProfile
+from csiphon.core.sampling import require_nominal_rate
 from csiphon.core.semantics import ValueKind
 from csiphon.core.signal import Signal
 from csiphon.pipeline.step import PointwiseStep
@@ -43,12 +44,10 @@ class DyadicFrequencyBands(PointwiseStep):
         streaming=Streaming.BATCH_EQUIVALENT,
     )
 
-    def _edges(
-        self, profile: AcquisitionProfile
-    ) -> tuple[RealArray, RealArray, RealArray]:
+    def _edges(self, layout: Layout) -> tuple[RealArray, RealArray, RealArray]:
         """Return (lower, upper, centers) band edges from the nominal nyquist."""
 
-        rate_hz = profile.require_sampling_rate(self.name)
+        rate_hz = require_nominal_rate(layout, self.name)
         nyquist = rate_hz / 2.0
         levels = np.arange(self.first_band, self.first_band + self.num_bands)
         lower = as_real_array(nyquist / (2.0**levels))
@@ -63,7 +62,7 @@ class DyadicFrequencyBands(PointwiseStep):
             raise LayoutError(f"num_bands must be >= 1, got {self.num_bands}.")
         if self.first_band < 1:
             raise LayoutError(f"first_band must be >= 1, got {self.first_band}.")
-        _, _, centers = self._edges(profile)
+        _, _, centers = self._edges(layout)
         band = Axis.static(AxisName.BAND, tuple(centers), unit="Hz")
         return layout.replace_axis(AxisName.FREQUENCY, band)
 
@@ -77,7 +76,7 @@ class DyadicFrequencyBands(PointwiseStep):
         """Sum bins into bands using the runtime frequencies."""
 
         frequencies = _frequencies_of(signal)
-        lower, upper, _ = self._edges(profile)
+        lower, upper, _ = self._edges(signal.layout)
 
         # band_mask[b, f] == 1 when frequency f lies within band b's [lower, upper).
         band_mask = (

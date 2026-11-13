@@ -10,6 +10,7 @@ from csiphon.core.axes import AxisName
 from csiphon.core.errors import LayoutError
 from csiphon.core.layout import Layout
 from csiphon.core.profile import AcquisitionProfile
+from csiphon.core.sampling import divide_nominal_rate
 from csiphon.core.signal import Signal, empty_signal
 from csiphon.pipeline.step import Step, StreamOperator
 from csiphon.spec import Category, LayoutEffect, StepSpec, Streaming
@@ -50,12 +51,14 @@ class SubsampleEvery(Step):
     )
 
     def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
-        """Time stays the (dynamic) axis; structure and semantics are unchanged."""
+        """Time stays the (dynamic) axis, at a lower nominal rate."""
 
         self.require_inputs(layout)
         if self.every < 1:
             raise LayoutError(f"every must be >= 1, got {self.every}.")
-        return layout
+
+        # Every Nth sample is kept, so the rate drops by that factor.
+        return divide_nominal_rate(layout, self.every)
 
     def process(
         self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile

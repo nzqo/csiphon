@@ -217,7 +217,7 @@ class Resample(Step):
         return self.fill.streaming
 
     def output_layout(self, layout: Layout, profile: AcquisitionProfile) -> Layout:
-        """Time stays the (dynamic) axis; structure and semantics are unchanged."""
+        """Time stays the (dynamic) axis, now on the grid rate."""
 
         self.require_inputs(layout)
         if (self.rate_hz is None) == (self.step_s is None):
@@ -234,7 +234,9 @@ class Resample(Step):
                 f"{type(self.fill).__name__} fill needs a complex signal (it "
                 f"interpolates magnitude and phase); got {layout.values.value}."
             )
-        return layout
+
+        # The output lies on the grid, so its nominal rate is the grid rate.
+        return layout.with_nominal_rate(1.0 / self._step_seconds())
 
     def process(
         self, signal: Signal, out_layout: Layout, profile: AcquisitionProfile

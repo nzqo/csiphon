@@ -394,8 +394,11 @@ class Pipeline:  # pylint: disable=too-many-instance-attributes
                 {inlet_id(name): one for name in self._inlets},
             )
 
-        # Single unnamed inlet (the original path).
+        # Single unnamed inlet (the original path). An inlet layout without a rate
+        # takes the profile's, so the profile's rate works for it as well.
         inlet_layout = profile.raw_csi_layout() if inlet is None else inlet
+        if inlet_layout.nominal_rate_hz is None:
+            inlet_layout = inlet_layout.with_nominal_rate(profile.sampling_rate_hz)
         return {INLET: inlet_layout}, {INLET: profile}
 
     def _resolve_outlets(self) -> dict[str, str]:
@@ -459,6 +462,10 @@ def _compile_node(
             in_layouts = [layouts[i] for i in node.inputs]
             in_profiles = [profiles[i] for i in node.inputs]
             out_layout = node.op.output_layout(in_layouts)
+
+            # The merged signal lies on the reference branch's timeline.
+            reference = in_layouts[node.op.align.reference]
+            out_layout = out_layout.with_nominal_rate(reference.nominal_rate_hz)
             return out_layout, _merged_profile(in_profiles, node.op, out_layout)
 
         # A plain step takes its single input line and keeps that line's profile.

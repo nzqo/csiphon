@@ -19,7 +19,8 @@ Size and coordinates come in three cases:
 - The time axis, named AxisName.TIME.
     Its coordinates ride with the data as `Signal.times`. It is runtime sized
     too, since you don't know a recording's or a stream's length up front. A
-    layout has at most one time axis.
+    layout has at most one time axis. It may carry a nominal sampling rate
+    (`nominal_rate_hz`), which steps that change the sampling grid update.
 """
 
 from __future__ import annotations
@@ -89,6 +90,10 @@ class Axis:
 
     Statically sized axes provide a positive `size` and, optionally, matching
     `coordinates`.
+
+    `nominal_rate_hz` is the nominal samples per second of the time axis (None if
+    unknown). Timestamps on the signal are never exactly uniform, so this is a
+    nominal value. Only the time axis has one.
     """
 
     # fmt: off
@@ -96,10 +101,21 @@ class Axis:
     size        : int | None
     coordinates : tuple[Coordinate, ...] | None = None
     unit        : str | None                    = None
+    nominal_rate_hz : float | None              = None
     # fmt: on
 
     def __post_init__(self) -> None:
-        """Validate the size / coordinates relationship."""
+        """Validate the size / coordinates relationship and the nominal rate."""
+
+        if self.nominal_rate_hz is not None:
+            if self.name != AxisName.TIME:
+                raise LayoutError(
+                    f"Only the time axis has a nominal rate, not '{self.name}'."
+                )
+            if self.nominal_rate_hz <= 0:
+                raise LayoutError(
+                    f"nominal_rate_hz must be > 0, got {self.nominal_rate_hz}."
+                )
 
         if self.size is None:
             if self.coordinates is not None:
@@ -130,10 +146,21 @@ class Axis:
     # Constructors
     # -------------------------------------------------------------------------
     @classmethod
-    def dynamic(cls, name: AxisName = AxisName.TIME, unit: str | None = "s") -> Axis:
+    def dynamic(
+        cls,
+        name: AxisName = AxisName.TIME,
+        unit: str | None = "s",
+        nominal_rate_hz: float | None = None,
+    ) -> Axis:
         """Create the dynamic time / window axis."""
 
-        return cls(name=name, size=None, coordinates=None, unit=unit)
+        return cls(
+            name=name,
+            size=None,
+            coordinates=None,
+            unit=unit,
+            nominal_rate_hz=nominal_rate_hz,
+        )
 
     @classmethod
     def static(

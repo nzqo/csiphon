@@ -97,7 +97,9 @@ class AcquisitionProfile:
         """
 
         axes = [
-            Axis.dynamic(AxisName.TIME, unit="s"),
+            Axis.dynamic(
+                AxisName.TIME, unit="s", nominal_rate_hz=self.sampling_rate_hz
+            ),
             Axis.static(AxisName.RECEIVER, tuple(range(self.n_receivers))),
             Axis.static(AxisName.TX_ANTENNA, tuple(range(self.n_tx_antennas))),
             Axis.static(AxisName.RX_ANTENNA, tuple(range(self.n_rx_antennas))),
