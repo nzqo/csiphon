@@ -24,8 +24,7 @@ class DelayTaps(PointwiseStep):
     Takes `num_taps` taps starting at `first_tap` from a complex delay axis.
     With `use_tap_abs` you get the tap magnitudes (`num_taps` values);
     otherwise you get the real and imaginary parts stacked (`2 * num_taps`
-    values). This is the reduction half of the old delay-autocorrelation step:
-    feed it the output of DelayAutocorrelation.
+    values). Feed it the output of DelayAutocorrelation.
     """
 
     num_taps: int = field(default=3, metadata={"doc": "number of taps to keep"})

@@ -424,7 +424,12 @@ class Pipeline:  # pylint: disable=too-many-instance-attributes
 
 
 def _compile_node(number: int, node: _BuildNode, layouts: dict[str, Layout]) -> Layout:
-    """Compile one node into its output layout."""
+    """Compile one node into its output layout.
+
+    A step reads the layout of its single input line. A merge combines the layouts
+    of its branches by its strategy. The merged signal lies on the timeline of the
+    alignment's reference branch, so it takes that branch's nominal sampling rate.
+    """
 
     # A layout error here becomes a CompileError that names the step, so it points at
     # the recipe line that failed.
@@ -451,7 +456,7 @@ class Siphon:
     """A validated pipeline, ready to pour (batch) or stream (chunk by chunk)."""
 
     # fmt: off
-    profile       : AcquisitionProfile
+    profile       : AcquisitionProfile # the input spec it was compiled against
     inlet_layouts : dict[str, Layout]  # inlet line id -> layout (one, or several)
     nodes         : tuple[Node, ...]   # the compiled operations, in execution order
     outlets       : dict[str, str]     # display name -> line id

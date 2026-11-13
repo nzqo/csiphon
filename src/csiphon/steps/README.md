@@ -73,7 +73,8 @@ Rules of thumb:
   dyadic bands need frequencies) hard-code an axis name.
 - **Facts come from the layout.** A step reads axes, subcarrier indices and the
   nominal sampling rate from the layout it gets (`require_nominal_rate(layout,
-  self.name)` for the rate). The profile only specifies the pipeline's input.
+  self.name)` for the rate). Steps never get the profile: it is only used at
+  compile time to build the layout of the inlet (see `AcquisitionProfile`).
   A step that changes the sampling grid (keeps every Nth sample, emits one
   sample per hop, resamples) sets the new rate on its output layout, with
   `divide_nominal_rate` or `Layout.with_nominal_rate`. A contract test in

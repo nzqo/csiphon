@@ -26,6 +26,13 @@ def resolve_nfft(subcarrier_indices: RealArray, nfft: int | None = None) -> int:
     """Return nfft, inferring it from the span of the subcarrier indices if None.
 
     The smallest FFT size larger than the span keeps every index on its own bin.
+
+    Note: nfft is decided solely by the span of the subcarrier indices, not by
+    their spacing. With different spacing, the axis unit would change (e.g. one
+    bin would be 12.5 ns vs 50 ns under the narrower HE spacing). The calculation
+    is still the same though. Currently, output axis of this step are in units of
+    "tap", so we can ignore the spacing for now. If we wanted it in physical SI
+    units, we will need to propagate it through the axis.
     """
 
     if nfft is not None:

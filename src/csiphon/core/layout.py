@@ -4,10 +4,11 @@ A Layout is the structure of a signal: its ordered named axes and their semantic
 It does not hold the recording's timestamps or data.
 
 A pipeline is "compiled" against an `AcquisitionProfile` (antennas, subcarriers,
-bandwidth, ...), which builds this layout. Because the layout carries no
-per-recording data, one compiled pipeline then works for every recording from
-that profile, and for an unbounded live stream where we don't know the
-timestamps up front.
+nominal sampling rate, ...), which builds the layout of the inlet. Because the
+layout carries no per-recording data, one compiled pipeline then works for every
+recording from that profile, and for an unbounded live stream where we don't know
+the timestamps up front. The time axis carries the nominal sampling rate, and
+steps that change the sampling grid update it.
 
 The concrete data and timestamps live on the runtime Signal.
 """

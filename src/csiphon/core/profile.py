@@ -5,9 +5,13 @@ receivers and antennas, which subcarriers, and the nominal sampling rate. A
 pipeline is compiled against it, which turns it into the layout of the inlet, so
 one compiled pipeline serves all recordings from that setup (batch or streaming).
 
-After the inlet the profile is not used. Steps read the axes, the subcarrier
-indices and the nominal rate from the layouts. A step that drops an antenna or
-changes the sampling rate changes the layout, not the profile.
+The profile is used in two places. `Pipeline.compile` turns it into the layout
+of each inlet (the receiver, antenna and subcarrier axes, and the time axis with
+the nominal sampling rate) and checks the receiver count against the number of
+inlets. `raw_signal` wraps a raw CSI array as a Signal with that layout. Nothing
+else reads it: steps read the axes, the subcarrier indices and the nominal rate
+from the layouts. A step that drops an antenna or changes the sampling rate
+changes the layout, not the profile.
 
 Sampling rate is deliberately **optional**: WiFi CSI timestamps are never
 perfectly uniform, and the timestamps carried on each Signal are the
@@ -32,7 +36,7 @@ from csiphon.core.signal import Signal, create_signal
 
 @dataclass(frozen=True, slots=True)
 class AcquisitionProfile:
-    """Radio configuration shared by every recording from one setup.
+    """Input specification shared by every recording from one setup.
 
     This describes a general MIMO, possibly multi-device capture. The spatial
     structure is three counts: how many receiver devices, how many transmit
@@ -48,6 +52,9 @@ class AcquisitionProfile:
     step adds them when it produces them.) Keeping the structural axes present lets
     captures merge (concatenate receivers or antennas) without one branch's
     axis having been squeezed away.
+
+    `center_frequency_hz` and `bandwidth_hz` are currently just metadata and not
+    used, since steps read what they need from axes, not the profile.
     """
 
     # fmt: off
