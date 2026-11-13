@@ -1,10 +1,10 @@
-"""Shared sliding-window geometry and the ring-buffer streaming operator.
+"""Shared sliding-window window and the ring-buffer streaming operator.
 
 Several steps place windows on the same grid: time-window pooling, windowed-FFT
 power, and the complex STFT. In streaming mode they also buffer samples until a
 whole window is ready.
 
-That shared geometry and buffering live here, so the steps (and their batch and
+That shared window and buffering live here, so the steps (and their batch and
 streaming paths) can't drift apart. The buffer follows the input's value kind, so
 it carries complex samples (the STFT) as happily as real ones (FFT power).
 """
@@ -58,8 +58,13 @@ def sliding_window_indices(
 
 
 @dataclass(frozen=True, slots=True)
-class WindowGeometry:
-    """The window size (samples) and hop stride (samples) for a sliding grid."""
+class WindowInSamples:
+    """A window length and a hop, both counted in samples.
+
+    Steps take them in seconds. This is the same window and hop once the sampling
+    rate has turned seconds into samples. `hop_stride` can be fractional, for a
+    hop that is not a whole number of samples.
+    """
 
     window_size: int
     hop_stride: float
@@ -67,8 +72,8 @@ class WindowGeometry:
     @classmethod
     def from_seconds(
         cls, rate_hz: float, window_s: float, hop_s: float
-    ) -> WindowGeometry:
-        """Resolve the physical window/hop (seconds) to samples at `rate_hz`."""
+    ) -> WindowInSamples:
+        """Convert a window and hop from seconds to samples at `rate_hz`."""
 
         window_size = max(1, round(window_s * rate_hz))
         hop_stride = max(1.0, hop_s * rate_hz)
@@ -90,7 +95,7 @@ def rfft_band(
     return as_real_array(frequencies[keep]), keep
 
 
-def _empty_time_buffer(layout: Layout) -> SignalArray:
+def empty_time_buffer(layout: Layout) -> SignalArray:
     """An empty `(0, *non_time_axes)` buffer sized and typed from a layout.
 
     The buffer stores samples with the time axis first, so its non-time shape is
@@ -104,40 +109,51 @@ def _empty_time_buffer(layout: Layout) -> SignalArray:
         if position == time_index:
             continue
         if size is None:
-            raise ValueError("WindowedOperator needs statically sized non-time axes.")
+            raise ValueError(
+                "SampleWindowOperator needs statically sized non-time axes."
+            )
         dims.append(size)
     dtype = np.complex128 if layout.values == ValueKind.COMPLEX else np.float64
     return as_signal_array(np.zeros((0, *dims), dtype=dtype))
 
 
 # Ring-buffer state (below) justifies the attribute count.
-class WindowedOperator(StreamOperator):  # pylint: disable=too-many-instance-attributes
-    """Buffer samples across chunks and apply a frame function to each window.
+class SampleWindowOperator(StreamOperator):  # pylint: disable=too-many-instance-attributes
+    """Cuts the stream into windows of a fixed number of samples, and computes
+    something (`frame_fn`) from each one.
 
-    Data arrives in chunks, but windows are placed on the whole stream, so a
-    window can span two chunks. This operator holds the samples an upcoming
-    window still needs and drops the rest, keeping memory bounded however long
-    the stream runs. The windows it produces match the batch ones exactly.
+    Steps that window by sample count use it to stream: WindowSum (the function
+    is a sum), WindowedFFTPower and Multitaper (a spectrum), ComplexStftMagnitude,
+    CovarianceSpectrum and LocalPcaBias. Only the function differs between them.
+
+    Data arrives in chunks, but a window can span two chunks. So this operator
+    keeps the samples that an upcoming window still needs and drops the rest. That
+    keeps memory bounded however long the stream runs. The windows are the same
+    ones batch processing would cut.
     """
 
     def __init__(
         self,
-        geometry: WindowGeometry,
+        window: WindowInSamples,
         frame_fn: FrameFn,
         in_layout: Layout,
         out_layout: Layout,
     ) -> None:
-        """Bind the window geometry, per-window frame function, and layouts."""
+        """Bind the window layout, what to compute per window, and the layouts.
 
-        self._window_size = geometry.window_size
-        self._hop_stride = geometry.hop_stride
+        `window` says how long a window is and how far it hops.
+        `frame_fn` turns the samples of one window into one output value.
+        """
+
+        self._window_size = window.window_size
+        self._hop_stride = window.hop_stride
         self._frame_fn = frame_fn
         self._out_layout = out_layout
 
         # The buffer holds input samples still needed by an upcoming window, time
         # axis first. Its non-time shape comes from the input layout, so it starts
         # empty rather than needing a special case for the first chunk.
-        self._buffer: SignalArray = _empty_time_buffer(in_layout)
+        self._buffer: SignalArray = empty_time_buffer(in_layout)
         self._buffer_times: RealArray = np.zeros(0)
         # Counters that let us map buffer positions back to absolute sample and
         # window numbers even after we drop consumed samples off the front: the
@@ -156,7 +172,7 @@ class WindowedOperator(StreamOperator):  # pylint: disable=too-many-instance-att
 
         time_index = chunk.layout.dynamic_index
         if time_index is None:
-            raise ValueError("WindowedOperator requires a signal with a time axis.")
+            raise ValueError("SampleWindowOperator requires a signal with a time axis.")
 
         # Append the new samples (time axis first) and their timestamps.
         incoming = as_signal_array(np.moveaxis(chunk.values, time_index, 0))

@@ -27,13 +27,13 @@ from csiphon.steps import (
     CovarianceSpectrum,
     DelayTaps,
     DyadicFrequencyBands,
-    FixedSizeWindowSum,
     Hold,
     LocalPcaBias,
     PrincipalComponents,
     Resample,
     RobustPca,
     SelectAxis,
+    WindowSum,
 )
 
 
@@ -91,7 +91,7 @@ def _delay_layout(d: int = 8) -> Layout:
     )
 
 
-# --- FixedSizeWindowSum: window_s / hop_s must be > 0 ---
+# --- WindowSum: window_s / hop_s must be > 0 ---
 
 
 @pytest.mark.parametrize(
@@ -103,13 +103,13 @@ def _delay_layout(d: int = 8) -> Layout:
         {"hop_s": -0.1},
     ],
 )
-def test_fixed_size_window_sum_rejects_nonpositive(
+def test_window_sum_rejects_nonpositive(
     profile: AcquisitionProfile, kwargs: dict[str, float]
 ) -> None:
     """A zero or negative window/hop length fails at compile."""
 
-    with pytest.raises(CompileError, match="fixed-size-window-sum"):
-        Pipeline().then(FixedSizeWindowSum(**kwargs)).compile(
+    with pytest.raises(CompileError, match="window-sum"):
+        Pipeline().then(WindowSum(**kwargs)).compile(
             profile, inlet=_subcarrier_layout()
         )
 

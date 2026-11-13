@@ -27,8 +27,8 @@ from csiphon.pipeline.step import Step, StreamOperator
 from csiphon.spec import Category, LayoutEffect, StepSpec, Streaming
 from csiphon.steps._support.windowing import (
     FrameFn,
-    WindowedOperator,
-    WindowGeometry,
+    SampleWindowOperator,
+    WindowInSamples,
     rfft_band,
 )
 
@@ -82,13 +82,13 @@ class WindowedFFTPower(Step):
             raise LayoutError(f"band_hz must be > 0, got {self.band_hz}.")
 
         rate_hz = require_nominal_rate(layout, self.name)
-        geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
-        kept_frequencies, _ = rfft_band(geometry.window_size, rate_hz, self.band_hz)
+        window = WindowInSamples.from_seconds(rate_hz, self.window_s, self.hop_s)
+        kept_frequencies, _ = rfft_band(window.window_size, rate_hz, self.band_hz)
         frequency = Axis.static(AxisName.FREQUENCY, tuple(kept_frequencies), unit="Hz")
 
         # One output sample per hop, so the output rate is the input rate over it.
         return (
-            divide_nominal_rate(layout, geometry.hop_stride)
+            divide_nominal_rate(layout, window.hop_stride)
             .insert_axis_after(AxisName.TIME, frequency)
             .with_representation(Representation.TIME_FREQUENCY)
             .with_values(ValueKind.POWER)
@@ -99,22 +99,22 @@ class WindowedFFTPower(Step):
 
         check_jitter(signal.times, step=self.name, strict=self.strict)
         rate_hz = require_nominal_rate(signal.layout, self.name)
-        geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
-        kept_frequencies, keep = rfft_band(geometry.window_size, rate_hz, self.band_hz)
+        window = WindowInSamples.from_seconds(rate_hz, self.window_s, self.hop_s)
+        kept_frequencies, keep = rfft_band(window.window_size, rate_hz, self.band_hz)
 
         # The time axis is first here (we check that at compile). Gather every
         # window's samples in one shot: for window w and offset s, take sample
         # start_w + s. This builds an (n_windows, window, *other_axes) array with
         # no Python loop over windows.
         samples = as_real_array(signal.values)
-        starts, centers = geometry.indices(samples.shape[0])
-        windows = samples[starts[:, None] + np.arange(geometry.window_size)[None, :]]
+        starts, centers = window.indices(samples.shape[0])
+        windows = samples[starts[:, None] + np.arange(window.window_size)[None, :]]
 
         # Apply a Hann taper along the window axis (axis 1) and take the real FFT
         # along it, then keep the power (squared magnitude) at the in-band bins.
-        hann_shape = (1, geometry.window_size) + (1,) * (samples.ndim - 1)
-        windows = windows * np.hanning(geometry.window_size).reshape(hann_shape)
-        spectrum = np.fft.rfft(windows, n=geometry.window_size, axis=1)
+        hann_shape = (1, window.window_size) + (1,) * (samples.ndim - 1)
+        windows = windows * np.hanning(window.window_size).reshape(hann_shape)
+        spectrum = np.fft.rfft(windows, n=window.window_size, axis=1)
         power = spectrum.real**2 + spectrum.imag**2
         power = power[:, keep]
 
@@ -129,10 +129,16 @@ class WindowedFFTPower(Step):
         """Ring-buffer operator that emits one spectrum per completed window."""
 
         rate_hz = require_nominal_rate(in_layout, self.name)
-        geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
-        _, keep = rfft_band(geometry.window_size, rate_hz, self.band_hz)
-        frame_fn = _hann_fft_power(geometry.window_size, keep)
-        return WindowedOperator(geometry, frame_fn, in_layout, out_layout)
+        window = WindowInSamples.from_seconds(rate_hz, self.window_s, self.hop_s)
+        _, keep = rfft_band(window.window_size, rate_hz, self.band_hz)
+        frame_fn = _hann_fft_power(window.window_size, keep)
+
+        # We have a helper for stream operators that run a function on fixed
+        # sliding windows. We tell it the window (its size and how far it moves)
+        # and which function to run on each window. It keeps the chunks it has
+        # seen so far as internal state, and slides the window over them as
+        # specified. Here, the function computes the Hann-windowed FFT power.
+        return SampleWindowOperator(window, frame_fn, in_layout, out_layout)
 
 
 def _hann_fft_power(window_size: int, keep: npt.NDArray[np.bool_]) -> FrameFn:

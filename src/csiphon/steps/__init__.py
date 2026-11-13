@@ -12,6 +12,7 @@ ButterworthFilter needs scipy) import it lazily, so the base install stays
 numpy-only.
 """
 
+from csiphon.core.sampling import WindowDeterminationMode
 from csiphon.steps.baseline import (
     CumulativeMeanSubtract,
     RunningMeanSubtract,
@@ -40,8 +41,8 @@ from csiphon.steps.normalization import (
 )
 from csiphon.steps.pooling import (
     DyadicFrequencyBands,
-    FixedSizeWindowSum,
     MeanOverAxes,
+    WindowSum,
 )
 from csiphon.steps.reduction import (
     DelayTaps,
@@ -69,6 +70,8 @@ from csiphon.steps.restructuring import FoldAxes, StackAmpPhase
 from csiphon.steps.scaling import LogScale, ToDecibels
 from csiphon.steps.statistics import CovarianceSpectrum, LocalPcaBias
 from csiphon.steps.temporal_features import (
+    FromNominalRate,
+    FromTimestamps,
     TimeDifference,
     WindowedSlope,
     WindowedVariance,
@@ -96,8 +99,9 @@ __all__ = [
     "DropSamples",
     "DyadicFrequencyBands",
     "FillMethod",
-    "FixedSizeWindowSum",
     "FoldAxes",
+    "FromNominalRate",
+    "FromTimestamps",
     "GainNormalize",
     "GlobalMaxNormalize",
     "Hold",
@@ -133,6 +137,8 @@ __all__ = [
     "TimeDifference",
     "ToDecibels",
     "UnitPhase",
+    "WindowDeterminationMode",
+    "WindowSum",
     "WindowedFFTPower",
     "WindowedSlope",
     "WindowedVariance",

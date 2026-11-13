@@ -9,6 +9,7 @@ and `strict` mode upgrades that warning to an error.
 """
 
 import warnings
+from enum import StrEnum
 
 import numpy as np
 
@@ -22,8 +23,33 @@ from csiphon.core.layout import Layout
 DEFAULT_JITTER_TOLERANCE = 0.5
 
 
+class WindowDeterminationMode(StrEnum):
+    """How a windowing step decides which samples belong to a window.
+
+    FROM_NOMINAL_RATE turns the window length in seconds into a fixed number of
+    samples with the nominal rate. FROM_TIMESTAMPS puts every sample into the
+    windows its own timestamp falls in, so gaps and irregular timing are handled.
+    """
+
+    # fmt: off
+    FROM_NOMINAL_RATE = "from-nominal-rate"
+    FROM_TIMESTAMPS   = "from-timestamps"
+    # fmt: on
+
+
 class JitterWarning(UserWarning):
     """Emitted when observed timestamp jitter exceeds the tolerance."""
+
+
+class RateMismatchWarning(UserWarning):
+    """Emitted when the timestamps run at a very different rate than the nominal one."""
+
+
+# The rate check waits for enough timestamps to get a steady median interval. It
+# only warns when the rates differ by a large factor: lost samples stretch the
+# median interval a little, a wrong sampling rate in the profile stretches it a lot.
+_RATE_CHECK_MIN_INTERVALS = 32
+_RATE_MISMATCH_FACTOR = 2.0
 
 
 def estimate_rate_hz(times_s: RealArray) -> float:
@@ -108,3 +134,56 @@ def check_jitter(
     if strict:
         raise DataError(message)
     warnings.warn(message, JitterWarning, stacklevel=2)
+
+
+class RateCheck:  # pylint: disable=too-few-public-methods
+    """Warn once if the timestamps disagree with the nominal rate by a large factor.
+
+    This is a class because it keeps state between calls. When streaming, the
+    timestamps arrive chunk by chunk, so it has to remember them until there are
+    enough for a steady median interval, and remember that it already checked.
+    """
+
+    def __init__(self, nominal_hz: float | None) -> None:
+        """Bind the nominal rate. Without one there is nothing to compare."""
+
+        self._nominal_hz = nominal_hz
+        self._times: list[RealArray] = []
+        self._count = 0
+        self._finished = nominal_hz is None
+
+    def observe(self, times_s: RealArray) -> None:
+        """Take in the next timestamps, and run the check once there are enough."""
+
+        # (The None check is redundant with `_finished`; it narrows the type.)
+        if self._finished or self._nominal_hz is None:
+            return
+
+        # Collect timestamps until there are enough to trust the median.
+        self._times.append(times_s)
+        self._count += times_s.size
+        if self._count <= _RATE_CHECK_MIN_INTERVALS:
+            return
+
+        # Check once, then never again. The median interval is robust against a
+        # few lost samples. Timestamps that do not increase are not our business.
+        self._finished = True
+        median_interval = float(np.median(np.diff(np.concatenate(self._times))))
+        self._times = []
+        if median_interval <= 0.0:
+            return
+
+        # Compare the rates in both directions, so 2x too fast and 2x too slow
+        # count the same.
+        observed_hz = 1.0 / median_interval
+        ratio = max(observed_hz / self._nominal_hz, self._nominal_hz / observed_hz)
+        if ratio > _RATE_MISMATCH_FACTOR:
+            warnings.warn(
+                f"Timestamps run at about {observed_hz:.4g} Hz but the nominal rate "
+                f"is {self._nominal_hz:.4g} Hz. Steps that turn seconds into sample "
+                "counts use the nominal rate. Check "
+                "AcquisitionProfile.sampling_rate_hz, or use "
+                "window_mode=FROM_TIMESTAMPS or a Resample step.",
+                RateMismatchWarning,
+                stacklevel=2,
+            )

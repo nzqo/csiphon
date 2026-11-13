@@ -9,19 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.0] - 2026-11-13
 
+### Added
+
+- `window_mode` on `WindowSum` and `WindowedVariance`
+  (`WindowDeterminationMode`).
+  `FROM_NOMINAL_RATE` is the old behavior and stays the default. With
+  `FROM_TIMESTAMPS`, a window holds the samples whose timestamps fall inside it,
+  so lost packets and irregular timing change what a window contains and not how
+  long it is. `WindowSum` then emits a window every `hop_s` seconds, with NaN for
+  an empty one (see `NanScrub`), and streams without a known sampling rate.
+  `WindowedSlope` instead takes `window=FromNominalRate(window_size, scale_by_dt)`
+  or `window=FromTimestamps(window_s)`, which replaces its `window_size` and
+  `scale_by_dt` arguments. The timestamp window fits against the real times.
+- A `RateMismatchWarning`, raised once per run, when the timestamps of an input
+  run at less than half or more than twice the nominal rate. It also catches a
+  wrong `sampling_rate_hz` in the profile.
+
 ### Fixed
 
 - Steps after `SubsampleEvery`, `Resample` or a windowing step still used the
   sampling rate of the original capture. After `SubsampleEvery(8)`, a
-  `FixedSizeWindowSum(0.128, 0.1)` summed 1 s windows every 0.8 s. These steps
-  now pass their new rate on.
+  `WindowSum(0.128, 0.1)` summed 1 s windows every 0.8 s. These steps now
+  pass their new rate on.
 
 ### Changed
 
 - The nominal sampling rate lives on the time axis (`Axis.nominal_rate_hz`,
   read with `Layout.nominal_rate_hz`). The profile still sets it at the inlet.
   Steps that change the sampling grid write the new rate: `SubsampleEvery`,
-  `Resample`, `FixedSizeWindowSum`, `WindowedFFTPower`, `Multitaper`,
+  `Resample`, `WindowSum`, `WindowedFFTPower`, `Multitaper`,
   `ComplexStftMagnitude`, `CovarianceSpectrum` and `LocalPcaBias`. A merge takes
   the rate of its reference branch.
 - The profile only specifies the input. Steps no longer receive it:
@@ -34,6 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   contiguous block of 57 subcarriers.
 - `DelayAutocorrelation` and `ChannelImpulseResponse` need the subcarrier axis to
   carry its indices as coordinates. Raw layouts always do.
+- `FixedSizeWindowSum` is now called `WindowSum`, since a window no longer has to
+  hold a fixed number of samples.
 
 ### Removed
 

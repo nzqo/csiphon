@@ -18,6 +18,7 @@ from csiphon.core.signal import Signal
 from csiphon.pipeline.merges import Junction
 from csiphon.pipeline.runners import (
     Outlets,
+    _new_rate_checks,
     _run_node,
     _seed_inlets,
     last_readers,
@@ -193,7 +194,9 @@ def measure(
     if tracing:
         tracemalloc.start()
     try:
-        env = _seed_inlets(siphon, signals, allow_partial=False)
+        env = _seed_inlets(
+            siphon, signals, _new_rate_checks(siphon), allow_partial=False
+        )
         last_reader = last_readers(siphon)
         steps: list[StepCost] = []
         for number, node in enumerate(siphon.nodes, start=1):

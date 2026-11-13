@@ -30,8 +30,8 @@ from csiphon.steps._support.broadcasting import (
 )
 from csiphon.steps._support.windowing import (
     FrameFn,
-    WindowedOperator,
-    WindowGeometry,
+    SampleWindowOperator,
+    WindowInSamples,
     rfft_band,
 )
 
@@ -174,31 +174,34 @@ class Multitaper(Step):
         # Size the windows from the sampling rate, then work out which rFFT
         # frequency bins fall within band_hz. Those bins become the frequency axis.
         rate_hz = require_nominal_rate(layout, self.name)
-        geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
-        kept_frequencies, _ = rfft_band(geometry.window_size, rate_hz, self.band_hz)
+        window = WindowInSamples.from_seconds(rate_hz, self.window_s, self.hop_s)
+        kept_frequencies, _ = rfft_band(window.window_size, rate_hz, self.band_hz)
         frequency = Axis.static(AxisName.FREQUENCY, tuple(kept_frequencies), unit="Hz")
 
         # One output sample per hop, so the output rate is the input rate over it.
         return (
-            divide_nominal_rate(layout, geometry.hop_stride)
+            divide_nominal_rate(layout, window.hop_stride)
             .replace_axis(self.axis, frequency)
             .with_representation(Representation.TIME_FREQUENCY)
             .with_values(ValueKind.POWER)
         )
 
-    def _operator(self, in_layout: Layout, out_layout: Layout) -> WindowedOperator:
+    def _operator(self, in_layout: Layout, out_layout: Layout) -> SampleWindowOperator:
         """Build the windowing operator with a DPSS-multitaper frame function."""
 
         rate_hz = require_nominal_rate(in_layout, self.name)
-        geometry = WindowGeometry.from_seconds(rate_hz, self.window_s, self.hop_s)
-        _, keep = rfft_band(geometry.window_size, rate_hz, self.band_hz)
-        tapers = _dpss_tapers(
-            geometry.window_size, self.time_bandwidth, self.num_tapers
-        )
+        window = WindowInSamples.from_seconds(rate_hz, self.window_s, self.hop_s)
+        _, keep = rfft_band(window.window_size, rate_hz, self.band_hz)
+        tapers = _dpss_tapers(window.window_size, self.time_bandwidth, self.num_tapers)
         feature_pos = operated_axis_position(in_layout, self.axis)
 
-        return WindowedOperator(
-            geometry,
+        # We have a helper for stream operators that run a function on fixed
+        # sliding windows. We tell it the window (its size and how far it moves)
+        # and which function to run on each window. It keeps the chunks it has
+        # seen so far as internal state, and slides the window over them as
+        # specified. Here, the function computes the multitaper spectrum.
+        return SampleWindowOperator(
+            window,
             _multitaper_frame(tapers, keep, feature_pos),
             in_layout,
             out_layout,

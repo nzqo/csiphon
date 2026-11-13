@@ -11,7 +11,6 @@ from csiphon.core import StreamingError
 from csiphon.steps import (
     DelayAutocorrelation,
     DelayTaps,
-    FixedSizeWindowSum,
     FoldAxes,
     GainNormalize,
     Magnitude,
@@ -22,6 +21,7 @@ from csiphon.steps import (
     SavitzkyGolay,
     TemporalMeanSubtract,
     WindowedFFTPower,
+    WindowSum,
 )
 from csiphon.steps._support.windowing import sliding_window_indices
 from csiphon.steps.filtering import Band, ButterworthFilter
@@ -74,7 +74,7 @@ def test_time_window_stream_equals_batch(profile, raw_signal, chunk) -> None:
         .then(Magnitude())
         .then(GainNormalize())
         .then(FoldAxes(axes=(AxisName.RX_ANTENNA, AxisName.SUBCARRIER)))
-        .then(FixedSizeWindowSum(window_s=0.128, hop_s=0.05))
+        .then(WindowSum(window_s=0.128, hop_s=0.05))
     )
     compiled = pipeline.compile(profile)
     batch = compiled.pour(raw_signal).single()

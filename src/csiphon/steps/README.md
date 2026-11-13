@@ -21,7 +21,7 @@ grouped by category:
 | `restructuring/` | rearrange or fold axes without losing information |
 | `resampling/` | change the temporal sampling grid |
 
-`_support/` holds shared internals (window geometry, the ring-buffer streaming
+`_support/` holds shared internals (window sizes in samples, the ring-buffer streaming
 operator), not steps.
 
 ## The per-step file template

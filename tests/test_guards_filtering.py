@@ -15,6 +15,7 @@ from csiphon.steps import (
     ButterworthFilter,
     ChannelImpulseResponse,
     DelayAutocorrelation,
+    FromNominalRate,
     Magnitude,
     SavitzkyGolay,
     WindowedSlope,
@@ -150,7 +151,11 @@ def test_windowed_slope_rejects_tiny_window(
     """The pre-existing guard rejects window_size < 2."""
 
     with pytest.raises(CompileError, match="windowed-slope"):
-        _compile(profile, Magnitude(), WindowedSlope(window_size=window_size))
+        _compile(
+            profile,
+            Magnitude(),
+            WindowedSlope(window=FromNominalRate(window_size=window_size)),
+        )
 
 
 # --- delay-autocorrelation ----------------------------------------------------

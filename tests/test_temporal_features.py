@@ -5,7 +5,13 @@ import pytest
 from conftest import stream_in_chunks
 
 from csiphon import AcquisitionProfile, Pipeline, Signal, create_signal
-from csiphon.steps import Magnitude, TimeDifference, WindowedSlope, WindowedVariance
+from csiphon.steps import (
+    FromNominalRate,
+    Magnitude,
+    TimeDifference,
+    WindowedSlope,
+    WindowedVariance,
+)
 from csiphon.steps.temporal_features import Mode
 
 
@@ -102,7 +108,9 @@ def test_windowed_slope_constant_is_zero_linear_is_constant(
     signal = create_signal(ramp, times, layout)
 
     compiled = (
-        Pipeline().then(WindowedSlope(scale_by_dt=False)).compile(profile, inlet=layout)
+        Pipeline()
+        .then(WindowedSlope(window=FromNominalRate(scale_by_dt=False)))
+        .compile(profile, inlet=layout)
     )
     out = compiled.pour(signal).single()
     per_sample_rate = 4.0 / (n - 1)

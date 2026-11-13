@@ -3,7 +3,8 @@
 The per-step tests pin each step on its own; this pins the numbers the whole
 chain produces on a fixed synthetic recording, so a change in one step's output
 convention that the next step silently accepts still shows up. The values were
-generated while the pipeline matched the reference implementation I ported from.
+generated while the pipeline matched an independent reference implementation of
+the same preprocessing.
 """
 
 import numpy as np
@@ -15,12 +16,12 @@ from csiphon.steps import (
     DelayAutocorrelation,
     DelayTaps,
     DyadicFrequencyBands,
-    FixedSizeWindowSum,
     FoldAxes,
     GainNormalize,
     LogScale,
     Magnitude,
     SynchrosqueezedPower,
+    WindowSum,
 )
 
 # fmt: off
@@ -46,7 +47,7 @@ def _pipeline() -> Pipeline:
         .then(fold_channels_into_feature(AxisName.DELAY))
         .then(SynchrosqueezedPower())
         .then(DyadicFrequencyBands(num_bands=3))
-        .then(FixedSizeWindowSum(window_s=0.25, hop_s=0.25))
+        .then(WindowSum(window_s=0.25, hop_s=0.25))
         .then(LogScale())
         .then(
             FoldAxes(

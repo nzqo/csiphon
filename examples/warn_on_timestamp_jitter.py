@@ -18,7 +18,7 @@ from csiphon import AcquisitionProfile, Pipeline
 from csiphon.core import DataError, JitterWarning
 from csiphon.core.sampling import effective_rate_hz
 from csiphon.core.signal import Signal
-from csiphon.steps import FixedSizeWindowSum, GainNormalize, Magnitude
+from csiphon.steps import GainNormalize, Magnitude, WindowSum
 
 
 def jittered_signal(profile: AcquisitionProfile, jitter: float) -> Signal:
@@ -45,7 +45,7 @@ def main() -> None:
     estimated = effective_rate_hz(signal.times, nominal_hz=None)
     print(f"nominal rate 1000.0 Hz; estimated from timestamps: {estimated:.1f} Hz")
 
-    lenient = FixedSizeWindowSum(window_s=0.128, hop_s=0.05)
+    lenient = WindowSum(window_s=0.128, hop_s=0.05)
     compiled = (
         Pipeline()
         .then(Magnitude())
@@ -60,7 +60,7 @@ def main() -> None:
     warned = any(issubclass(w.category, JitterWarning) for w in caught)
     print("lenient run: warned about jitter ->", warned)
 
-    strict = FixedSizeWindowSum(window_s=0.128, hop_s=0.05, strict=True)
+    strict = WindowSum(window_s=0.128, hop_s=0.05, strict=True)
     strict_pipeline = Pipeline().then(Magnitude()).then(GainNormalize()).then(strict)
     try:
         strict_pipeline.compile(profile).pour(signal).single()

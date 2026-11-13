@@ -791,10 +791,17 @@ def _axis_dict(axis: Axis) -> dict[str, Any]:
 
 
 def _json_value(value: object) -> object:
-    """Make a value JSON-safe: enums become their value, tuples become lists."""
+    """Make a value JSON-safe: enums become their value, tuples become lists, and
+    parameter objects (a dataclass, like a window choice) a dict with their name."""
 
     if isinstance(value, Enum):
         return value.value
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        fields = {
+            f.name: _json_value(getattr(value, f.name))
+            for f in dataclasses.fields(value)
+        }
+        return {"kind": type(value).__name__, **fields}
     if isinstance(value, tuple | list):
         return [_json_value(item) for item in value]
     return value

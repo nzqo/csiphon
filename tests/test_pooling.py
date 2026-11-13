@@ -19,7 +19,7 @@ from csiphon import (
     create_signal,
 )
 from csiphon.core import CompileError
-from csiphon.steps import DyadicFrequencyBands, FixedSizeWindowSum, Magnitude
+from csiphon.steps import DyadicFrequencyBands, Magnitude, WindowSum
 from csiphon.steps.pooling import MeanOverAxes
 
 
@@ -137,10 +137,10 @@ def test_mean_streams_like_batch(profile, raw_signal) -> None:
     assert np.allclose(batch.values, streamed.values)
 
 
-# --- FixedSizeWindowSum: our own sliding-window sum, so pin its exact values ---
+# --- WindowSum: our own sliding-window sum, so pin its exact values ---
 
 
-def test_fixed_size_window_sum_adds_up_each_full_window(profile) -> None:
+def test_window_sum_adds_up_each_full_window(profile) -> None:
     """Each output value is the sum of one window of samples, placed at its centre.
 
     Eight samples valued 1..8, a window and hop of three samples: the first window
@@ -158,7 +158,7 @@ def test_fixed_size_window_sum_adds_up_each_full_window(profile) -> None:
     )
     out = (
         Pipeline()
-        .then(FixedSizeWindowSum(window_s=0.003, hop_s=0.003))
+        .then(WindowSum(window_s=0.003, hop_s=0.003))
         .compile(profile, inlet=layout)
         .pour(signal)
         .single()

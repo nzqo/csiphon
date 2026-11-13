@@ -23,7 +23,11 @@ from csiphon.steps._support.broadcasting import (
     broadcast_channels,
     operated_axis_position,
 )
-from csiphon.steps._support.windowing import FrameFn, WindowedOperator, WindowGeometry
+from csiphon.steps._support.windowing import (
+    FrameFn,
+    SampleWindowOperator,
+    WindowInSamples,
+)
 
 _EPS = 1e-12
 
@@ -176,13 +180,19 @@ class CovarianceSpectrum(Step):
             .with_representation(Representation.FEATURE_VECTOR)
         )
 
-    def _operator(self, in_layout: Layout, out_layout: Layout) -> WindowedOperator:
+    def _operator(self, in_layout: Layout, out_layout: Layout) -> SampleWindowOperator:
         """Build the shared windowing operator with the covariance frame."""
 
-        geometry = WindowGeometry(self.window_size, float(self.hop_size))
+        window = WindowInSamples(self.window_size, float(self.hop_size))
         feature_pos = operated_axis_position(in_layout, self.axis)
-        return WindowedOperator(
-            geometry,
+
+        # We have a helper for stream operators that run a function on fixed
+        # sliding windows. We tell it the window (its size and how far it moves)
+        # and which function to run on each window. It keeps the chunks it has
+        # seen so far as internal state, and slides the window over them as
+        # specified. Here, the function computes the covariance statistics.
+        return SampleWindowOperator(
+            window,
             _covariance_frame(self.shrinkage, feature_pos),
             in_layout,
             out_layout,

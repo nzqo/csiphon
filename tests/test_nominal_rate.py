@@ -1,5 +1,7 @@
 """The nominal sampling rate lives on the time axis and follows the sampling grid."""
 
+import warnings
+
 import numpy as np
 import pytest
 from conftest import stream_in_chunks
@@ -17,18 +19,18 @@ from csiphon import (
     ValueKind,
 )
 from csiphon.core.errors import CompileError, LayoutError
-from csiphon.core.sampling import divide_nominal_rate
+from csiphon.core.sampling import RateMismatchWarning, divide_nominal_rate
 from csiphon.steps import (
-    FixedSizeWindowSum,
+    Hold as HoldFill,
+)
+from csiphon.steps import (
     Magnitude,
     MeanOverAxes,
     Resample,
     SubsampleEvery,
     WindowedFFTPower,
     WindowedVariance,
-)
-from csiphon.steps import (
-    Hold as HoldFill,
+    WindowSum,
 )
 
 
@@ -95,7 +97,7 @@ def test_time_based_steps_use_the_rate_after_subsampling(streamed: bool) -> None
         Pipeline()
         .then(Magnitude())
         .then(SubsampleEvery(8))
-        .then(FixedSizeWindowSum(window_s=0.128, hop_s=0.1))
+        .then(WindowSum(window_s=0.128, hop_s=0.1))
         .compile(_profile())
     )
 
@@ -172,3 +174,55 @@ def test_a_merge_takes_the_rate_of_its_reference_branch(
     declared = compiled.outlet_layout.nominal_rate_hz
     assert declared == pytest.approx(rate_hz)
     assert declared == pytest.approx(1.0 / np.median(np.diff(output.times)), rel=0.1)
+
+
+def _timestamps_at(rate_hz: float, count: int = 100) -> Signal:
+    return _profile(1000.0).raw_signal(
+        np.ones((count, 1, 2), dtype=complex), np.arange(count) / rate_hz
+    )
+
+
+@pytest.mark.parametrize("streamed", [False, True], ids=["batch", "stream"])
+@pytest.mark.parametrize("actual_hz", [125.0, 4000.0], ids=["too-slow", "too-fast"])
+def test_a_wrong_nominal_rate_warns_once(streamed: bool, actual_hz: float) -> None:
+    """Timestamps at 125 Hz against a profile saying 1000 Hz is the stale-rate
+    mistake this guards against, and a rate that is too high is as wrong. The
+    warning appears once per run, not once per chunk."""
+
+    compiled = Pipeline().then(Magnitude()).compile(_profile(1000.0))
+    signal = _timestamps_at(actual_hz)
+
+    with pytest.warns(RateMismatchWarning) as caught:
+        if streamed:
+            stream_in_chunks(compiled, signal, 10)
+        else:
+            compiled.pour(signal)
+
+    assert len(caught) == 1
+
+
+def test_lost_samples_do_not_trigger_the_rate_warning() -> None:
+    """Random loss leaves the median interval at the nominal one, so a lossy but
+    correctly labeled capture stays quiet."""
+
+    rng = np.random.default_rng(0)
+    kept = np.sort(rng.choice(1000, 700, replace=False))
+    signal = _profile(1000.0).raw_signal(
+        np.ones((700, 1, 2), dtype=complex), kept / 1000.0
+    )
+    compiled = Pipeline().then(Magnitude()).compile(_profile(1000.0))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        compiled.pour(signal)
+
+
+def test_a_short_recording_is_not_checked_for_the_rate() -> None:
+    """A handful of timestamps gives no steady median interval, so even a wrong
+    rate stays quiet instead of risking a false alarm."""
+
+    compiled = Pipeline().then(Magnitude()).compile(_profile(1000.0))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        compiled.pour(_timestamps_at(125.0, count=10))

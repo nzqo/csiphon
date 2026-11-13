@@ -54,8 +54,8 @@ from csiphon.spec import (
 )
 from csiphon.steps._support.windowing import (
     IndexArray,
-    WindowedOperator,
-    WindowGeometry,
+    SampleWindowOperator,
+    WindowInSamples,
     sliding_window_indices,
 )
 
@@ -249,10 +249,15 @@ class ComplexStftMagnitude(Step):  # pylint: disable=too-many-instance-attribute
 
             return as_real_array(self._spectra(block[None], taper, mean_axes)[0])
 
-        geometry = WindowGeometry(
+        window = WindowInSamples(
             window_size=self.window_size, hop_stride=float(self.hop_size)
         )
-        return WindowedOperator(geometry, frame, in_layout, out_layout)
+        # We have a helper for stream operators that run a function on fixed
+        # sliding windows. We tell it the window (its size and how far it moves)
+        # and which function to run on each window. It keeps the chunks it has
+        # seen so far as internal state, and slides the window over them as
+        # specified. Here, the function computes the complex STFT of one window.
+        return SampleWindowOperator(window, frame, in_layout, out_layout)
 
     def _place_windows(
         self, values: SignalArray

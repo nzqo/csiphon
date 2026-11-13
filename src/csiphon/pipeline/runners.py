@@ -16,6 +16,7 @@ import numpy as np
 from csiphon.core.arrays import as_signal_array
 from csiphon.core.errors import DataError, StreamingError
 from csiphon.core.layout import Layout
+from csiphon.core.sampling import RateCheck
 from csiphon.core.signal import Signal, empty_signal
 from csiphon.pipeline._lines import INLET, inlet_id
 from csiphon.pipeline.merges import Junction, Trap
@@ -126,8 +127,21 @@ def _with_inlet_rate(signal: Signal, expected: Layout) -> Signal:
     return signal.with_values(signal.values, layout)
 
 
+def _new_rate_checks(siphon: Siphon) -> dict[str, RateCheck]:
+    """Return one rate check per inlet, comparing timestamps to the compiled rate."""
+
+    return {
+        line: RateCheck(layout.nominal_rate_hz)
+        for line, layout in siphon.inlet_layouts.items()
+    }
+
+
 def _seed_inlets(
-    siphon: Siphon, signals: Signal | Mapping[str, Signal], *, allow_partial: bool
+    siphon: Siphon,
+    signals: Signal | Mapping[str, Signal],
+    rate_checks: Mapping[str, RateCheck],
+    *,
+    allow_partial: bool,
 ) -> dict[str, Signal]:
     """Turn the caller's input(s) into the env dict keyed by inlet line id.
 
@@ -138,6 +152,7 @@ def _seed_inlets(
 
     if isinstance(signals, Signal):
         _check_inlet(signals, siphon.inlet_layout)
+        rate_checks[INLET].observe(signals.times)
         return {INLET: _with_inlet_rate(signals, siphon.inlet_layout)}
 
     # Place each given signal on its inlet, checking its structure as we go.
@@ -147,6 +162,7 @@ def _seed_inlets(
         if line not in siphon.inlet_layouts:
             raise DataError(f"Unknown inlet '{name}'.")
         _check_inlet(signal, siphon.inlet_layouts[line])
+        rate_checks[line].observe(signal.times)
         env[line] = _with_inlet_rate(signal, siphon.inlet_layouts[line])
 
     # An inlet with no signal this round: an error in batch, an empty chunk when
@@ -162,7 +178,7 @@ def _seed_inlets(
 def pour(siphon: Siphon, signals: Signal | Mapping[str, Signal]) -> Outlets:
     """Run a whole recording through a siphon and return every outlet."""
 
-    env = _seed_inlets(siphon, signals, allow_partial=False)
+    env = _seed_inlets(siphon, signals, _new_rate_checks(siphon), allow_partial=False)
     last_reader = last_readers(siphon)
     for index, node in enumerate(siphon.nodes):
         inputs = [env[line] for line in node.inputs]
@@ -233,6 +249,7 @@ class Stream:
         """Build one streaming operator per node, refusing batch-only steps."""
 
         self._siphon = siphon
+        self._rate_checks = _new_rate_checks(siphon)
         self._operators: dict[str, StreamOperator | Trap | SequenceTrap] = {}
         for node in siphon.nodes:
             self._operators[node.output] = _build_operator(node, siphon)
@@ -251,7 +268,10 @@ class Stream:
         """
 
         env = _seed_inlets(
-            self._siphon, _inlet_signals(signals, named), allow_partial=True
+            self._siphon,
+            _inlet_signals(signals, named),
+            self._rate_checks,
+            allow_partial=True,
         )
         for node in self._siphon.nodes:
             inputs = [env[line] for line in node.inputs]
